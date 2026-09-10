@@ -14,7 +14,7 @@
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=Source+Sans+3:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
   <!-- Die Fassungsnummer zwingt Browser und Auslieferung dazu, die
        aktuelle Datei zu holen statt einer zwischengespeicherten. -->
-  <link rel="stylesheet" href="./style.css?v=14">
+  <link rel="stylesheet" href="./style.css?v=15">
 </head>
 <body>
 
@@ -31,7 +31,7 @@
         <span class="status-dot"></span><span id="connection-text">Not connected</span>
       </div>
       <button id="disconnect-button" class="text-button" hidden>Disconnect</button>
-      <button id="connect-button" class="primary-button">Connect counter</button>
+      <button id="connect-button" class="primary-button">Connect Board</button>
     </div>
   </header>
 
@@ -101,7 +101,7 @@
 
         <section class="stage-main">
           <div class="section-heading">
-            <div><span class="eyebrow">LIVE TELEMETRY</span><h1>Current &amp; angle</h1></div>
+            <div><span class="eyebrow">LIVE TELEMETRY</span><h1>Handle and wake-up current</h1></div>
             <span class="section-index">01</span>
           </div>
 
@@ -117,7 +117,7 @@
               <!-- Der Nullpunkt gehört zur Ansicht, nicht zum Gerät: Gesetzt
                    wird er hier, geschrieben wird dafür nichts. -->
               <button id="reset-zero" class="text-button" disabled
-                      title="Take the current reading as the handle's rest position">Zero handle</button>
+                      title="Take the current reading as the handle's rest position">Reset Handle Angle</button>
               <span class="ack" id="ack"></span>
             </div>
           </div>
@@ -193,8 +193,8 @@
             Connect the counter over USB; the page reads its serial stream at
             115200 baud. Shortly after connecting the angle then read counts as
             the handle's rest position &ndash; connect with the handle released,
-            or press &ldquo;Zero handle&rdquo; to take the reading of that
-            moment as the new zero.
+            or press &ldquo;Reset Handle Angle&rdquo; to take the reading of
+            that moment as the new zero.
           </p>
 
           <p class="hint" id="unsupported" hidden>
@@ -210,7 +210,7 @@
   <!-- Die Fassung ist die laufende Nummer des Stands, aus dem diese Seite
        stammt. Sie ist zugleich die Nummer, die Stil und Skript aus dem
        Zwischenspeicher holt. -->
-  <small class="app-version">v14</small>
+  <small class="app-version">v15</small>
 
   <!-- three.js liegt im Projekt statt auf einem fremden Netz: Das Dashboard
        wird oft ohne Internetzugang am Gerät benutzt. Die Zuordnung gilt für
@@ -231,6 +231,6 @@
        Knopf, der die Verbindung aufbaut. So läuft die Seite auch als Datei,
        genau wie die Vorlage, aus der sie stammt. Das Modell holt sie sich
        danach selbst; gelingt das nicht, bleibt es bei der Zeichnung. -->
-  <script src="./js/app.js?v=14"></script>
+  <script src="./js/app.js?v=15"></script>
 </body>
 </html>
