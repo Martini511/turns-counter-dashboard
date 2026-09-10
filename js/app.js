@@ -37,7 +37,7 @@
   // Das Modell des Türgriffs. Wo es liegt und wie weit sein Hebel schwenkt,
   // steht im Modell selbst. Der Pfad des Moduls ist von dieser Datei aus
   // gerechnet, der des Modells vom Dokument: So verlangt es der Browser.
-  const MODEL_MODULE = "./model3d.js?v=17";
+  const MODEL_MODULE = "./model3d.js?v=18";
   const MODEL_URL = "./assets/models/xensiv_turns_counter.glb";
 
   // Solange das Modell nicht steht, gilt dieser Weg. Er ist derselbe, den das
@@ -147,13 +147,8 @@
   let angleZero = null;
   let openedAt = 0;
 
-  // Der letzte Strom aus einer Zeit, in der der Sensor nachweislich wach war,
-  // und ob er beim letzten Bild schlief. Zwischen der letzten Winkelmeldung
-  // und dem Erkennen des Schlafs vergehen ein paar hundert Millisekunden, in
-  // denen schon der Ruhestrom hereinkommt; ohne diesen Rückgriff frören die
-  // Karten auf ihm ein statt auf dem Weckstrom, um den es hier geht.
-  let awakeAverage = null;
-  let awakePeak = null;
+  // Ob der Sensor beim letzten Bild schlief. Der Übergang ist der Augenblick,
+  // in dem die Stromkarten geleert werden.
   let wasAsleep = false;
 
   // ─── Bytestrom ────────────────────────────────────────
@@ -234,8 +229,6 @@
     // Jede Verbindung beginnt ohne Nullpunkt: Der erste Winkel setzt ihn.
     angleZero = null;
     openedAt = performance.now();
-    awakeAverage = null;
-    awakePeak = null;
 
     connectButton.hidden = true;
     disconnectButton.hidden = false;
@@ -438,11 +431,10 @@
 
     prune(now);
 
-    // Schläft der Sensor, halten die beiden Karten den Wert, den sie beim
-    // Einschlafen zeigten. Der Zähler misst dann zwar weiter – seinen eigenen
-    // Ruhestrom –, aber die Frage, die diese Karten beantworten, ist die nach
-    // dem Strom beim Wecken. Aufgezeichnet wird alles: Im Verlauf steht auch
-    // der Ruhestrom, dort gehört er hin.
+    // Schläft der Sensor, bleiben die beiden Karten leer. Der Zähler misst
+    // dann zwar weiter – seinen eigenen Ruhestrom –, aber die Frage, die diese
+    // Karten beantworten, ist die nach dem Strom beim Wecken. Aufgezeichnet
+    // wird alles: Im Verlauf steht auch der Ruhestrom, dort gehört er hin.
     if (!isSleeping()) {
       metricAverage.textContent = formatMicroAmps(average);
       metricPeak.textContent = formatMicroAmps(peak);
@@ -456,14 +448,6 @@
 
     angleTimes.push(now);
     angleValues.push(degrees);
-
-    // Kommt ein Winkel, ist das Gerät in diesem Augenblick wach - der zuletzt
-    // gemessene Strom stammt also aus dem Wachbetrieb.
-    const last = currentAverages.length - 1;
-    if (last >= 0) {
-      awakeAverage = currentAverages[last];
-      awakePeak = currentPeaks[last];
-    }
 
     // Die erste Meldung nach der Einschwingfrist legt den Nullpunkt fest. Die
     // Winkel davor bekommen ihren Bezug nachträglich.
@@ -691,11 +675,14 @@
     prune(viewNow());
     updateRolling(performance.now());   // die Messwerte bleiben auch angehalten aktuell
 
-    // Was der Sensor im Schlaf nicht misst, soll auch nicht aussehen, als
-    // wäre es eben gemessen worden. Beim Einschlafen kehren die beiden Karten
-    // auf den letzten Wert aus dem Wachbetrieb zurück und bleiben dort stehen.
+    // Was der Sensor im Schlaf nicht misst, soll auch nicht dastehen. Beim
+    // Einschlafen werden die beiden Karten geleert und bleiben leer, bis das
+    // erste Paket nach dem Aufwachen sie wieder füllt.
     const asleep = isSleeping();
-    if (asleep && !wasAsleep) holdCurrent();
+    if (asleep && !wasAsleep) {
+      metricAverage.textContent = "--";
+      metricPeak.textContent = "--";
+    }
     wasAsleep = asleep;
 
     // `hidden` als Eigenschaft kennt nur HTML; die Zeichnung ist SVG und
@@ -705,12 +692,6 @@
 
     drawCharts();
     requestAnimationFrame(frame);
-  }
-
-  function holdCurrent() {
-    if (awakeAverage === null) return;
-    metricAverage.textContent = formatMicroAmps(awakeAverage);
-    metricPeak.textContent = formatMicroAmps(awakePeak);
   }
 
   function drawCharts() {
