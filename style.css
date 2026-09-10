@@ -121,17 +121,17 @@ button:disabled, input:disabled, select:disabled { cursor: not-allowed; opacity:
 .panel { padding: 40px clamp(22px, 5vw, 72px) 64px; animation: reveal .35s ease-out both; }
 .panel-stage { padding: 0; }
 
-.section-heading { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 28px; }
+.section-heading { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 16px; }
 .eyebrow, .section-index { color: var(--accent-dark); font: 600 10px "IBM Plex Mono", monospace; }
-h1, h2 { margin: 5px 0 0; font-size: clamp(26px, 3vw, 42px); line-height: 1.05; }
+h1, h2 { margin: 4px 0 0; font-size: clamp(22px, 2vw, 32px); line-height: 1.05; }
 .section-index { color: #aeb4b5; font-size: 18px; }
-.subhead { margin: 36px 0 14px; font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.subhead { margin: 22px 0 12px; font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
 /* Die Knöpfe gehören zu dem, was sie bewirken, und stehen deshalb bei der
    Überschrift. Die Abstände trägt die Zeile, nicht die Überschrift: Sonst
    richteten sie sich an deren Rändern aus statt an ihrer Schrift. */
-.subhead-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin: 36px 0 14px; }
+.subhead-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin: 20px 0 12px; }
 .subhead-row .subhead { margin: 0; }
-.hint { margin: 24px 0 0; color: var(--muted); font-size: 13px; line-height: 1.6; }
+.hint { margin: 12px 0 0; color: var(--muted); font-size: 12px; line-height: 1.55; }
 .hint code { font-family: "IBM Plex Mono", monospace; color: var(--ink); }
 
 /* ─── Bühne mit Gerät ────────────────────────────── */
@@ -292,18 +292,28 @@ h1, h2 { margin: 5px 0 0; font-size: clamp(26px, 3vw, 42px); line-height: 1.05; 
 .stage-line span { color: #9fb3b5; font: 500 10px "IBM Plex Mono", monospace; }
 .stage-line strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 15px "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; }
 
-.stage-main { min-width: 0; padding: 40px clamp(22px, 4vw, 60px) 64px; }
+/* Die Spalte füllt das Fenster, und was an Höhe übrig bleibt, bekommen die
+   Verläufe. So steht auf einem hohen Schirm ein hoher Verlauf und auf einem
+   flachen ein flacher – statt dass auf dem einen Platz verschenkt und auf dem
+   anderen gescrollt wird. */
+.stage-main {
+  min-width: 0;
+  min-height: calc(100vh - 76px);
+  display: flex;
+  flex-direction: column;
+  padding: 22px clamp(22px, 4vw, 60px) 24px;
+}
 
 /* ─── Werkzeugleiste ─────────────────────────────── */
 
 .toolbar {
-  min-height: 58px;
+  min-height: 50px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px 20px;
+  gap: 10px 20px;
   flex-wrap: wrap;
-  padding: 10px 0;
+  padding: 8px 0;
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
 }
@@ -349,20 +359,32 @@ h1, h2 { margin: 5px 0 0; font-size: clamp(26px, 3vw, 42px); line-height: 1.05; 
 /* Die Trennlinien bringen die Karten selbst mit, als Schlagschatten in die
    ein Pixel breite Fuge hinein. Läge die Farbe im Grund des Rasters, stünde
    dort, wo die letzte Zeile nicht voll wird, ein grauer Block statt nichts. */
-/* Sechs Karten in zwei Reihen zu dreien. Eine Spaltenzahl, die sich nach der
-   Breite richtet, liesse in der letzten Reihe eine einzelne Karte stehen –
-   das sähe nach einem Fehler aus, nicht nach einem Raster. */
-.metric-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; margin-top: 25px; }
-.metric-card { background: var(--surface); box-shadow: 0 0 0 1px var(--line); padding: 18px 20px; display: grid; gap: 2px; align-content: start; }
+/* Sechs Karten in einer Reihe. Die Spalte ist breit – in zwei Reihen gestapelt
+   verschenkte sie diese Breite und drängte dafür die Verläufe aus dem Bild. */
+.metric-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 1px; margin-top: 18px; }
+.metric-card { background: var(--surface); box-shadow: 0 0 0 1px var(--line); padding: 13px 15px; display: grid; gap: 1px; align-content: start; }
 .metric-card span { color: var(--accent-dark); font: 600 10px "IBM Plex Mono", monospace; }
-.metric-card strong { font: 600 clamp(19px, 1.7vw, 26px) "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.metric-card small { color: var(--muted); font-size: 11px; }
+.metric-card strong { font: 600 clamp(17px, 1.25vw, 22px) "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.metric-card small { color: var(--muted); font-size: 10px; }
 
 /* ─── Verläufe ───────────────────────────────────── */
 
-.chart-stack { display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); }
-.chart-card { background: var(--surface); padding: 14px 18px 18px; }
-.chart-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 10px; }
+/* Nebeneinander statt übereinander: Zwei Verläufe von je einem halben Meter
+   Breite sagen nicht mehr als zwei von einem viertel – gestapelt kosten sie
+   aber die Höhe, die das Fenster gar nicht hat. Die Höhe der Zeichenfläche
+   folgt dem Fenster, damit auf einem flachen Schirm nichts über die Kante
+   gerät. */
+.chart-stack {
+  flex: 1 1 auto;
+  min-height: 180px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+}
+.chart-card { background: var(--surface); padding: 12px 16px 14px; min-width: 0; display: flex; flex-direction: column; }
+.chart-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
 .chart-title { color: var(--accent-dark); font: 600 10px "IBM Plex Mono", monospace; letter-spacing: .04em; }
 .chart-legend { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font: 11px "IBM Plex Mono", monospace; }
 .swatch { display: inline-block; width: 14px; height: 3px; border-radius: 2px; }
@@ -372,19 +394,32 @@ h1, h2 { margin: 5px 0 0; font-size: clamp(26px, 3vw, 42px); line-height: 1.05; 
 .swatch-angle { background: var(--accent-soft); }
 .swatch-travel { background: var(--ink); }
 .swatch-asleep { background: #9fb0b2; }
-.chart-card canvas { display: block; width: 100%; height: 240px; background: #fbfcfb; }
+/* Das Zeichenfeld nimmt, was die Karte ihm lässt. `height: 0` ist dabei keine
+   Angabe zur Grösse, sondern der Verzicht darauf: Ohne sie zöge die Leinwand
+   ihre Höhe aus ihrem eigenen Attribut, das das Skript aus der gemessenen
+   Höhe setzt – sie triebe sich selbst auf. `min-height` hält sie davon ab,
+   unter das Lesbare zu schrumpfen; darunter scrollt die Seite eben doch, und
+   das ist richtig so. */
+.chart-card canvas {
+  display: block;
+  flex: 1 1 auto;
+  width: 100%;
+  height: 0;
+  min-height: 120px;
+  background: #fbfcfb;
+}
 
 /* ─── Aufklappbereich ────────────────────────────── */
 /* Aufbau und Masse wie im Maus-Konfigurator, damit ein Aufklappbereich hier
    aussieht wie dort. */
 
-.accordion { margin-top: 36px; border: 1px solid var(--line); background: var(--surface); }
+.accordion { margin-top: 16px; border: 1px solid var(--line); background: var(--surface); }
 
 .accordion > summary {
   display: flex;
   align-items: center;
   gap: 18px;
-  padding: 18px 22px;
+  padding: 12px 20px;
   cursor: pointer;
   list-style: none;
   font-weight: 700;
@@ -406,9 +441,9 @@ h1, h2 { margin: 5px 0 0; font-size: clamp(26px, 3vw, 42px); line-height: 1.05; 
 .accordion > summary:hover { background: #f7f9f9; }
 .accordion > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
-.accordion-title { display: grid; gap: 2px; font-size: 17px; }
+.accordion-title { display: grid; gap: 1px; font-size: 15px; }
 .accordion-title small { color: var(--muted); font-size: 12px; font-weight: 400; }
-.accordion-body { padding: 20px 22px 22px; }
+.accordion-body { padding: 16px 20px 18px; }
 
 /* ─── Protokoll ──────────────────────────────────── */
 
@@ -418,7 +453,7 @@ h1, h2 { margin: 5px 0 0; font-size: clamp(26px, 3vw, 42px); line-height: 1.05; 
 .log-tools { display: flex; justify-content: flex-end; margin-bottom: 10px; }
 
 .log-box {
-  height: 190px;
+  height: clamp(120px, 18vh, 190px);
   overflow-y: auto;
   padding: 14px 18px;
   border: 1px solid var(--line);
@@ -436,6 +471,17 @@ h1, h2 { margin: 5px 0 0; font-size: clamp(26px, 3vw, 42px); line-height: 1.05; 
 @keyframes pulse { 50% { opacity: .3; } }
 
 /* ─── Anpassung an kleine Anzeigen ───────────────── */
+
+/* Sechs Karten nebeneinander brauchen Breite. Reicht sie nicht, werden es
+   drei und dann zwei; die Verläufe rücken übereinander, sobald einer von
+   ihnen schmaler wäre als seine Beschriftung. */
+@media (max-width: 1300px) {
+  .metric-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 1240px) {
+  .chart-stack { grid-template-columns: 1fr; }
+}
 
 @media (max-width: 1100px) {
   .metric-grid { grid-template-columns: 1fr 1fr; }

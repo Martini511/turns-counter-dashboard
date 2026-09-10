@@ -38,7 +38,7 @@
   // Das Modell des Türgriffs. Wo es liegt und wie weit sein Hebel schwenkt,
   // steht im Modell selbst. Der Pfad des Moduls ist von dieser Datei aus
   // gerechnet, der des Modells vom Dokument: So verlangt es der Browser.
-  const MODEL_MODULE = "./model3d.js?v=11";
+  const MODEL_MODULE = "./model3d.js?v=12";
   const MODEL_URL = "./assets/models/xensiv_turns_counter.glb";
 
   // Solange das Modell nicht steht, gilt dieser Weg. Er ist derselbe, den das

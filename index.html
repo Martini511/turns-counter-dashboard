@@ -14,7 +14,7 @@
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=Source+Sans+3:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
   <!-- Die Fassungsnummer zwingt Browser und Auslieferung dazu, die
        aktuelle Datei zu holen statt einer zwischengespeicherten. -->
-  <link rel="stylesheet" href="./style.css?v=11">
+  <link rel="stylesheet" href="./style.css?v=12">
 </head>
 <body>
 
@@ -208,14 +208,11 @@
           </details>
 
           <p class="hint" id="hint">
-            Connect the counter over USB and the page reads its serial stream at
-            115200 baud. Binary packets carry the average and peak current of a
-            2&nbsp;ms window, plain lines carry the angle. The sleep timeout is
-            written to the device as <code>T&lt;ms&gt;</code>; the device
-            confirms it with <code>OK sleep</code>. Shortly after connecting the
-            angle then read counts as the handle's rest position &ndash; connect
-            with the handle released, or press &ldquo;Zero handle&rdquo; to take
-            the reading of that moment as the new zero.
+            Connect the counter over USB; the page reads its serial stream at
+            115200 baud. Shortly after connecting the angle then read counts as
+            the handle's rest position &ndash; connect with the handle released,
+            or press &ldquo;Zero handle&rdquo; to take the reading of that
+            moment as the new zero.
           </p>
 
           <p class="hint" id="unsupported" hidden>
@@ -231,7 +228,7 @@
   <!-- Die Fassung ist die laufende Nummer des Stands, aus dem diese Seite
        stammt. Sie ist zugleich die Nummer, die Stil und Skript aus dem
        Zwischenspeicher holt. -->
-  <small class="app-version">v11</small>
+  <small class="app-version">v12</small>
 
   <!-- three.js liegt im Projekt statt auf einem fremden Netz: Das Dashboard
        wird oft ohne Internetzugang am Gerät benutzt. Die Zuordnung gilt für
@@ -252,6 +249,6 @@
        Knopf, der die Verbindung aufbaut. So läuft die Seite auch als Datei,
        genau wie die Vorlage, aus der sie stammt. Das Modell holt sie sich
        danach selbst; gelingt das nicht, bleibt es bei der Zeichnung. -->
-  <script src="./js/app.js?v=11"></script>
+  <script src="./js/app.js?v=12"></script>
 </body>
 </html>
