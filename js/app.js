@@ -31,7 +31,7 @@
   // Das Modell des Türgriffs. Wo es liegt und wie weit sein Hebel schwenkt,
   // steht im Modell selbst. Der Pfad des Moduls ist von dieser Datei aus
   // gerechnet, der des Modells vom Dokument: So verlangt es der Browser.
-  const MODEL_MODULE = "./model3d.js?v=4";
+  const MODEL_MODULE = "./model3d.js?v=5";
   const MODEL_URL = "./assets/models/xensiv_turns_counter.glb";
 
   // Solange das Modell nicht steht, gilt dieser Weg. Er ist derselbe, den das
@@ -595,14 +595,23 @@
     return ((degrees % 360) + 540) % 360 - 180;
   }
 
-  // Der nächste Winkel wird zur neuen Null. Ein Griff, der beim Verbinden
-  // gerade gezogen war, lässt sich so nachträglich richtigstellen, ohne die
-  // Verbindung zu lösen.
+  // Der Griff wird auf den Winkel genullt, der gerade gilt – nicht auf den
+  // nächsten, der hereinkommt. Zwischen dem Druck auf den Knopf und der
+  // nächsten Meldung liegt eine Bewegung, und genau um die wäre der Nullpunkt
+  // dann verschoben. Nur wenn noch gar nichts gemessen wurde, gibt es nichts
+  // zu nehmen; dann setzt ihn die erste Meldung.
   function resetZero() {
-    angleZero = null;
-    stageTravel.textContent = "–";
-    if (model) model.reset();
-    addLog("[OK]  Handle zero cleared, next reading sets it", "is-ok");
+    if (lastAngle === null) {
+      angleZero = null;
+      stageTravel.textContent = "–";
+      if (model) model.reset();
+      addLog("[OK]  Handle zero cleared, next reading sets it", "is-ok");
+      return;
+    }
+
+    angleZero = lastAngle;
+    updateHandle(lastAngle);
+    addLog(`[OK]  Handle zero set at ${lastAngle}°`, "is-ok");
   }
 
   // Der Bogen läuft von der Null im Uhrzeigersinn bis zur aktuellen Stellung.
