@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f2f5f5">
+  <title>Infineon | XENSIV&trade; Turns Counter Dashboard</title>
+  <meta name="description"
+        content="Infineon demo application: live monitoring of angle and
+                 wake-up current of the XENSIV&trade; turns counter over the
+                 Web Serial API.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=Source+Sans+3:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+  <!-- Die Fassungsnummer zwingt Browser und Auslieferung dazu, die
+       aktuelle Datei zu holen statt einer zwischengespeicherten. -->
+  <link rel="stylesheet" href="./style.css?v=3">
+</head>
+<body>
+
+  <header class="app-header">
+    <a class="brand" href="./" aria-label="Infineon XENSIV turns counter dashboard">
+      <img class="brand-logo" src="./lowres-Logo_Infineon_RGB.eps.png" alt="Infineon Technologies">
+      <span class="brand-text">
+        <strong>XENSIV&trade; Turns Counter</strong>
+        <small>Wake-up monitor</small>
+      </span>
+    </a>
+    <div class="connection-tools">
+      <div id="connection-label" class="connection-label" data-state="offline">
+        <span class="status-dot"></span><span id="connection-text">Not connected</span>
+      </div>
+      <button id="disconnect-button" class="text-button" hidden>Disconnect</button>
+      <button id="connect-button" class="primary-button">Connect counter</button>
+    </div>
+  </header>
+
+  <main class="app-shell">
+    <!-- Der Zähler kennt eine einzige Einstellung, und die gehört zu dem, was
+         sie bewirkt: Sie steht in der Werkzeugleiste der Live-Ansicht. Eine
+         Reiterleiste mit nur einem Reiter wäre kein Wegweiser, sondern eine
+         leere Geste. -->
+    <div class="panel panel-stage" id="live-panel">
+      <div class="stage-shell">
+
+        <aside class="device-stage">
+          <div class="stage-label">
+            <span>DEVICE 01</span><span id="stage-transport">WEB SERIAL</span>
+          </div>
+
+          <div class="dial-stage" id="handle-stage">
+            <!-- Das CAD-Modell übernimmt die Bühne, sobald es geladen ist.
+                 Ohne WebGL oder bei einem Ladefehler bleibt die Zeichnung
+                 darunter stehen – sie zeigt denselben Winkel. -->
+            <canvas class="handle-canvas" id="handle-canvas" hidden
+                    aria-label="Model of the XENSIV turns counter door handle"></canvas>
+
+            <svg class="dial-svg" viewBox="0 0 320 352" role="img"
+                 aria-label="Schematic view of the XENSIV turns counter">
+
+              <!-- Skalenring -->
+              <circle class="dial-ring" cx="160" cy="160" r="126"/>
+              <circle class="dial-face" cx="160" cy="160" r="112"/>
+              <g class="dial-ticks" id="dial-ticks"></g>
+
+              <!-- Der zurückgelegte Weg seit der Null. Der Bogen wird im
+                   Skript gesetzt. -->
+              <path class="dial-arc" id="dial-arc" d=""/>
+
+              <!-- Der Zeiger reicht nicht bis zur Mitte: Dort steht die Zahl,
+                   und ein Zeiger, der bei jeder halben Drehung durch sie
+                   hindurchführe, machte sie unlesbar. -->
+              <g id="dial-needle-group">
+                <line class="dial-needle" x1="160" y1="56" x2="160" y2="92"/>
+                <circle class="dial-needle-tip" cx="160" cy="56" r="8"/>
+              </g>
+
+              <text class="dial-value" id="dial-value" x="160" y="154">&ndash;</text>
+              <text class="dial-caption" x="160" y="182">DEGREES</text>
+              <text class="dial-brand" x="160" y="334">XENSIV&#8482;</text>
+            </svg>
+          </div>
+
+          <!-- Schläft der Sensor, sagt die Bühne das dort, wo sonst der Griff
+               schwenkt – nicht in einer Zeile weiter unten, die man beim
+               Zusehen nicht liest. -->
+          <span class="sleep-badge" id="sleep-badge" hidden>SENSOR SLEEPING</span>
+
+          <div class="stage-readout">
+            <div class="stage-line">
+              <span>ANGLE</span><strong id="stage-angle">&ndash;</strong>
+            </div>
+            <div class="stage-line">
+              <span>HANDLE TRAVEL</span><strong id="stage-travel">&ndash;</strong>
+            </div>
+            <div class="stage-line">
+              <span>PACKET RATE</span><strong id="stage-rate">&ndash;</strong>
+            </div>
+          </div>
+        </aside>
+
+        <section class="stage-main">
+          <div class="section-heading">
+            <div><span class="eyebrow">LIVE TELEMETRY</span><h1>Current &amp; angle</h1></div>
+            <span class="section-index">01</span>
+          </div>
+
+          <div class="toolbar">
+            <span class="live-state" id="live-state"><i></i><span id="live-state-text">Not connected</span></span>
+            <div class="stream-controls">
+              <label class="field">Sleep timeout
+                <input id="sleep-ms" type="number" min="20" max="60000" step="10"
+                       value="1000" disabled>
+                <span class="unit">ms</span>
+              </label>
+              <button id="set-sleep" class="secondary-button" disabled>Set</button>
+              <span class="ack" id="ack"></span>
+            </div>
+          </div>
+
+          <div class="metric-grid">
+            <div class="metric-card">
+              <span>ANGLE</span><strong id="metric-angle">--</strong><small>degrees</small>
+            </div>
+            <div class="metric-card">
+              <span>AVERAGE CURRENT</span><strong id="metric-avg">--</strong><small>2 ms window</small>
+            </div>
+            <div class="metric-card">
+              <span>PEAK CURRENT</span><strong id="metric-peak">--</strong><small>2 ms window</small>
+            </div>
+            <div class="metric-card">
+              <span>ROLLING AVERAGE</span><strong id="metric-roll-avg">--</strong><small>1.2 s window</small>
+            </div>
+            <div class="metric-card">
+              <span>ROLLING MAXIMUM</span><strong id="metric-roll-max">--</strong><small>1.2 s window</small>
+            </div>
+            <div class="metric-card">
+              <span>PACKET RATE</span><strong id="metric-rate">--</strong><small>packets per second</small>
+            </div>
+          </div>
+
+          <div class="subhead-row">
+            <h2 class="subhead">History</h2>
+            <div class="chart-controls">
+              <label class="field">Window
+                <select id="window-select">
+                  <option value="1">1 s</option>
+                  <option value="3">3 s</option>
+                  <option value="5">5 s</option>
+                  <option value="10">10 s</option>
+                  <option value="30" selected>30 s</option>
+                  <option value="60">60 s</option>
+                  <option value="300">5 min</option>
+                </select>
+              </label>
+              <button id="pause-button" class="text-button">Pause</button>
+              <button id="clear-button" class="text-button">Clear</button>
+              <button id="csv-button" class="secondary-button" disabled>Download CSV</button>
+            </div>
+          </div>
+
+          <div class="chart-stack">
+            <div class="chart-card">
+              <div class="chart-head">
+                <span class="chart-title">CURRENT &middot; &micro;A</span>
+                <span class="chart-legend">
+                  <i class="swatch swatch-avg"></i>average
+                  <i class="swatch swatch-peak"></i>peak
+                </span>
+              </div>
+              <canvas id="current-chart" aria-label="Current over time"></canvas>
+            </div>
+            <div class="chart-card">
+              <div class="chart-head">
+                <span class="chart-title">ANGLE &middot; DEGREES</span>
+                <span class="chart-legend">
+                  <i class="swatch swatch-angle"></i>angle
+                </span>
+              </div>
+              <canvas id="angle-chart" aria-label="Angle over time"></canvas>
+            </div>
+          </div>
+
+          <div class="subhead-row">
+            <h2 class="subhead">Serial log</h2>
+            <label class="checkbox-field">
+              <input id="autoscroll" type="checkbox" checked> autoscroll
+            </label>
+          </div>
+          <div class="log-box" id="log-box" data-empty="No lines received yet."></div>
+
+          <p class="hint" id="hint">
+            Connect the counter over USB and the page reads its serial stream at
+            115200 baud. Binary packets carry the average and peak current of a
+            2&nbsp;ms window, plain lines carry the angle. The sleep timeout is
+            written to the device as <code>T&lt;ms&gt;</code>; the device
+            confirms it with <code>OK sleep</code>.
+          </p>
+
+          <p class="hint" id="unsupported" hidden>
+            This browser does not support the <code>Web Serial API</code>. Use
+            Chrome, Edge or Opera over <code>https://</code> or
+            <code>localhost</code>.
+          </p>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <!-- Die Fassung ist die laufende Nummer des Stands, aus dem diese Seite
+       stammt. Sie ist zugleich die Nummer, die Stil und Skript aus dem
+       Zwischenspeicher holt. -->
+  <small class="app-version">v3</small>
+
+  <!-- three.js liegt im Projekt statt auf einem fremden Netz: Das Dashboard
+       wird oft ohne Internetzugang am Gerät benutzt. Die Zuordnung gilt für
+       das ganze Dokument, also auch für das Modul, das die Seite später
+       nachlädt. -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "./js/vendor/three.module.min.js",
+        "three/addons/": "./js/vendor/addons/"
+      }
+    }
+  </script>
+
+  <!-- Ein gewöhnliches Skript, kein Modul. Module holt der Browser über
+       CORS, und eine Seite, die von der Festplatte geladen wurde, hat keine
+       Herkunft, gegen die er prüfen könnte - sie bliebe tot, und mit ihr der
+       Knopf, der die Verbindung aufbaut. So läuft die Seite auch als Datei,
+       genau wie die Vorlage, aus der sie stammt. Das Modell holt sie sich
+       danach selbst; gelingt das nicht, bleibt es bei der Zeichnung. -->
+  <script src="./js/app.js?v=3"></script>
+</body>
+</html>

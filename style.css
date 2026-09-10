@@ -1,0 +1,434 @@
+/* XENSIV™ Turns Counter Dashboard
+   Eine Ansicht: die Live-Überwachung. Farbwelt nach Infineon – Ocean als
+   Leitfarbe, Orange als Signalfarbe für den Spitzenstrom, dunkle Bühne für
+   das Gerät. Aufbau und Maße entsprechen dem Maus-Konfigurator und dem
+   Controller-Dashboard, damit alle drei Oberflächen als ein Werkzeug
+   erscheinen. */
+
+:root {
+  --paper: #f2f5f5;
+  --surface: #ffffff;
+  --ink: #12262b;
+  --muted: #6b7a7d;
+  --line: #dfe4e4;
+  --accent: #0a8a7c;
+  --accent-dark: #076c61;
+  --accent-soft: #12a190;
+  --signal: #eb7000;
+  --danger: #cd2f2f;
+  --stage: #0b2e33;
+  --stage-line: #1b444a;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "Source Sans 3", "Source Sans Pro", system-ui, sans-serif;
+}
+
+button, input, select { font: inherit; }
+button { cursor: pointer; }
+button:disabled, input:disabled, select:disabled { cursor: not-allowed; opacity: .42; }
+
+/* ─── Kopfzeile ──────────────────────────────────── */
+
+/* Die Kopfzeile bleibt beim Blättern stehen. Sie trägt den Verbindungsstand
+   und die Knöpfe dazu – beides soll erreichbar sein, ohne erst nach oben
+   zurückzukehren. Zugleich gibt sie der Bühne darunter eine feste Kante, an
+   der diese kleben kann. */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  height: 76px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 0 clamp(20px, 4vw, 64px);
+  border-bottom: 1px solid var(--line);
+  background: rgba(242, 245, 245, .94);
+  backdrop-filter: blur(8px);
+}
+
+.brand { display: flex; align-items: center; gap: 14px; color: inherit; text-decoration: none; }
+.brand-logo { height: 30px; width: auto; }
+.brand-text { display: block; padding-left: 14px; border-left: 1px solid var(--line); }
+.brand-text strong, .brand-text small { display: block; }
+.brand-text strong { font-size: 15px; font-weight: 700; }
+.brand-text small { color: var(--muted); font-size: 11px; }
+
+.connection-tools { display: flex; align-items: center; gap: 18px; }
+
+/* Die Fassungsnummer steht in der Ecke und drängt sich nicht auf. Sie ist
+   nicht anzuklicken und nicht auszuwählen – gebraucht wird sie nur, wenn
+   jemand nach ihr fragt. */
+.app-version {
+  position: fixed;
+  right: 10px;
+  bottom: 8px;
+  z-index: 3;
+  color: var(--muted);
+  font: 500 10px "IBM Plex Mono", monospace;
+  letter-spacing: .06em;
+  opacity: .55;
+  pointer-events: none;
+  user-select: none;
+}
+
+.connection-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: 500 11px "IBM Plex Mono", monospace;
+  text-transform: uppercase;
+}
+
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: #969c9e; flex-shrink: 0; }
+.connection-label[data-state="online"] .status-dot { background: var(--accent-soft); box-shadow: 0 0 0 4px #12a19026; }
+.connection-label[data-state="searching"] .status-dot { background: var(--signal); animation: pulse 1s infinite; }
+.connection-label[data-state="error"] .status-dot { background: var(--danger); }
+
+/* ─── Schaltflächen ──────────────────────────────── */
+
+.primary-button, .secondary-button, .text-button {
+  border-radius: 2px;
+  padding: 10px 16px;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+.primary-button { background: var(--ink); color: #fff; }
+.primary-button:hover:not(:disabled) { background: var(--accent-dark); }
+.secondary-button { background: var(--accent); color: #fff; }
+.secondary-button:hover:not(:disabled) { background: var(--accent-dark); }
+.text-button { background: transparent; color: var(--accent-dark); padding-inline: 8px; }
+.text-button:hover:not(:disabled) { text-decoration: underline; }
+/* Angehalten ist ein Zustand, kein Klick. Der Knopf trägt ihn sichtbar, sonst
+   suchte man den Grund für den stehenden Verlauf im Gerät. */
+.text-button.is-active { background: var(--ink); color: #fff; }
+.text-button.is-active:hover { text-decoration: none; background: var(--accent-dark); }
+
+/* ─── Grundraster ───────────────────────────────── */
+
+.app-shell { min-height: calc(100vh - 76px); background: var(--surface); }
+
+.panel { padding: 40px clamp(22px, 5vw, 72px) 64px; animation: reveal .35s ease-out both; }
+.panel-stage { padding: 0; }
+
+.section-heading { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 28px; }
+.eyebrow, .section-index { color: var(--accent-dark); font: 600 10px "IBM Plex Mono", monospace; }
+h1, h2 { margin: 5px 0 0; font-size: clamp(26px, 3vw, 42px); line-height: 1.05; }
+.section-index { color: #aeb4b5; font-size: 18px; }
+.subhead { margin: 36px 0 14px; font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+/* Die Knöpfe gehören zu dem, was sie bewirken, und stehen deshalb bei der
+   Überschrift. Die Abstände trägt die Zeile, nicht die Überschrift: Sonst
+   richteten sie sich an deren Rändern aus statt an ihrer Schrift. */
+.subhead-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin: 36px 0 14px; }
+.subhead-row .subhead { margin: 0; }
+.hint { margin: 24px 0 0; color: var(--muted); font-size: 13px; line-height: 1.6; }
+.hint code { font-family: "IBM Plex Mono", monospace; color: var(--ink); }
+
+/* ─── Bühne mit Gerät ────────────────────────────── */
+/* Links das Gerät, rechts die Werte. */
+
+.stage-shell {
+  display: grid;
+  grid-template-columns: minmax(320px, 38%) minmax(520px, 62%);
+  min-height: calc(100vh - 76px);
+  /* Die Bühne wächst nicht mit der Spalte daneben. Würde sie das, sässe das
+     Gerät in ihrer Mitte – also weit unter dem Bildrand. Sie ist so hoch wie
+     das Fenster; darunter führt die Hülle ihre Farbe weiter, damit die linke
+     Spalte nicht abbricht. `start` lässt ihr zugleich den Raum, den das
+     Kleben braucht: Eine gedehnte Zelle hätte nichts, worin sie wandern
+     könnte. */
+  align-items: start;
+  background: linear-gradient(90deg, var(--stage) 0 38%, transparent 38%);
+}
+
+/* Der Zeiger bleibt beim Blättern stehen. Wer unten den Stromverlauf liest,
+   soll oben nicht die Stellung verlieren, aus der er stammt. */
+.device-stage {
+  position: sticky;
+  top: 76px;
+  overflow: hidden;
+  height: calc(100vh - 76px);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: var(--stage);
+  color: #fff;
+}
+
+.device-stage::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: .08;
+  background-image:
+    linear-gradient(#fff 1px, transparent 1px),
+    linear-gradient(90deg, #fff 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+/* Beschriftung und Messwerte liegen über dem Gerät, nicht daneben. Damit sie
+   auf einer hellen Fläche lesbar bleiben, bringen sie ihre eigene Abdunklung
+   mit, die zur Mitte hin ausläuft. */
+.stage-label {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 26px clamp(24px, 3vw, 48px) 40px;
+  background: linear-gradient(var(--stage) 30%, #0b2e3300);
+  pointer-events: none;
+  color: #9fb3b5;
+  font: 500 10px "IBM Plex Mono", monospace;
+}
+.stage-label span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Die Zelle ist ausdrücklich auf die volle Fläche festgelegt. Bliebe sie auf
+   `auto`, richtete sie sich nach der Zeichnung – und deren Grösse kommt von
+   der Zelle. Aus dieser Rückkopplung wüchse die Zeichnung über die Bühne
+   hinaus. */
+.dial-stage {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: grid;
+  grid-template: 100% / 100%;
+  place-items: center;
+}
+
+/* Beide Darstellungen liegen im selben Rasterfeld übereinander. Sichtbar ist
+   immer nur eine: Sobald das Modell steht, tritt die Zeichnung ab. */
+.handle-canvas, .dial-svg { grid-area: 1 / 1; }
+.dial-svg { display: block; width: min(100%, 400px); height: auto; }
+.handle-canvas {
+  display: block;
+  place-self: stretch;
+  width: 100%;
+  height: 100%;
+  /* Ohne diese Zeile beantwortet der Browser das Ziehen mit Scrollen und der
+     Zeigerlauf bricht mitten in der Drehung ab. */
+  touch-action: none;
+  cursor: grab;
+}
+.handle-canvas:active { cursor: grabbing; }
+.handle-canvas[hidden] { display: none; }
+.has-model .dial-svg { display: none; }
+
+/* ─── Zifferblatt ────────────────────────────────── */
+/* Die Zeichnung trägt die Farben der Bühne: Sie ist deren Bauteil, nicht ein
+   Bild darauf. */
+
+.dial-ring { fill: none; stroke: #2f5b62; stroke-width: 2; }
+.dial-face { fill: #123037; stroke: #1b444a; stroke-width: 1; }
+.dial-tick { stroke: #2f5b62; stroke-width: 2; }
+.dial-tick.is-major { stroke: #6d9298; stroke-width: 3; }
+.dial-tick-label { fill: #6d9298; font-family: "IBM Plex Mono", monospace; font-size: 11px; text-anchor: middle; dominant-baseline: central; }
+
+/* Der Bogen zeigt den Weg seit der letzten Nullstellung – nicht mehr als eine
+   Umdrehung, denn dort beginnt er von vorn. */
+.dial-arc { fill: none; stroke: var(--accent-soft); stroke-width: 8; stroke-linecap: round; opacity: .55; }
+
+/* Die Drehung liegt in der CSS-Eigenschaft mit festem Ursprung. Über das
+   SVG-Attribut rotate(a 160 160) interpoliert der Browser die
+   Transformationsmatrix komponentenweise – dabei wandert der Drehpunkt und
+   der Zeiger taumelt. */
+#dial-needle-group {
+  transform-box: view-box;
+  transform-origin: 160px 160px;
+  transition: transform .06s linear;
+}
+.dial-needle { stroke: #eaf6f4; stroke-width: 4; stroke-linecap: round; }
+.dial-needle-tip { fill: var(--accent-soft); }
+
+.dial-value { fill: #eaf6f4; font-family: "IBM Plex Mono", monospace; font-size: 32px; font-weight: 600; text-anchor: middle; dominant-baseline: central; }
+.dial-caption { fill: #6d9298; font-family: "IBM Plex Mono", monospace; font-size: 10px; letter-spacing: .18em; text-anchor: middle; dominant-baseline: central; }
+.dial-brand { fill: #7ea4aa; font-family: inherit; font-size: 15px; font-weight: 600; text-anchor: middle; dominant-baseline: central; }
+
+/* Schläft der Sensor, steht das Wort auf der Bühne. Es hängt unter der
+   Beschriftung, weil es dorthin gehört: zum Zustand des Geräts, nicht zu
+   einem seiner Messwerte. Den Zeiger lässt es durch – sonst liesse sich das
+   Modell an dieser Stelle nicht drehen. */
+.sleep-badge {
+  position: absolute;
+  top: 68px;
+  left: 50%;
+  z-index: 2;
+  transform: translateX(-50%);
+  padding: 7px 14px;
+  border: 1px solid #eb700066;
+  border-radius: 2px;
+  background: #eb700026;
+  color: #f6a45c;
+  font: 600 11px "IBM Plex Mono", monospace;
+  letter-spacing: .1em;
+  white-space: nowrap;
+  pointer-events: none;
+  animation: pulse 1.8s infinite;
+}
+.sleep-badge[hidden] { display: none; }
+
+.stage-readout {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 8px;
+  padding: 40px clamp(24px, 3vw, 48px) 26px;
+  background: linear-gradient(#0b2e3300, var(--stage) 55%);
+  pointer-events: none;
+}
+.stage-line { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 8px; border-top: 1px solid var(--stage-line); }
+.stage-line span { color: #9fb3b5; font: 500 10px "IBM Plex Mono", monospace; }
+.stage-line strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 15px "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; }
+
+.stage-main { min-width: 0; padding: 40px clamp(22px, 4vw, 60px) 64px; }
+
+/* ─── Werkzeugleiste ─────────────────────────────── */
+
+.toolbar {
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 20px;
+  flex-wrap: wrap;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.live-state { display: inline-flex; align-items: center; gap: 9px; white-space: nowrap; font-size: 13px; font-weight: 700; color: var(--muted); }
+.live-state i { width: 9px; height: 9px; border-radius: 50%; background: #c3cacb; flex-shrink: 0; }
+.live-state.is-running { color: var(--ink); }
+.live-state.is-running i { background: var(--accent-soft); box-shadow: 0 0 0 4px #12a19026; animation: pulse 1.4s infinite; }
+
+.stream-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+/* Eingabefelder tragen ihre Beschriftung vor sich her und keinen Rahmen um
+   sich: Die Linie unter der Zahl genügt, um zu sagen, dass hier etwas
+   einzutragen ist. */
+.field { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; }
+.field input, .field select {
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  padding: 6px 2px;
+  background: transparent;
+  color: var(--ink);
+  font: 500 13px "IBM Plex Mono", monospace;
+  font-variant-numeric: tabular-nums;
+}
+.field input { width: 84px; }
+.field input:focus, .field select:focus { outline: 0; border-bottom-color: var(--accent); }
+.field select { cursor: pointer; }
+.field .unit { font: 500 11px "IBM Plex Mono", monospace; }
+
+/* Die Antwort des Geräts steht neben dem Knopf, der sie ausgelöst hat –
+   zurückhaltend, aber nachprüfbar. */
+.ack { color: var(--muted); font: 500 11px "IBM Plex Mono", monospace; }
+.ack.is-ok { color: var(--accent-dark); }
+.ack.is-error { color: var(--danger); }
+
+.checkbox-field { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; }
+.checkbox-field input { width: 15px; height: 15px; accent-color: var(--accent); }
+
+.chart-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+/* ─── Messwertkarten ─────────────────────────────── */
+
+/* Die Trennlinien bringen die Karten selbst mit, als Schlagschatten in die
+   ein Pixel breite Fuge hinein. Läge die Farbe im Grund des Rasters, stünde
+   dort, wo die letzte Zeile nicht voll wird, ein grauer Block statt nichts. */
+/* Sechs Karten in zwei Reihen zu dreien. Eine Spaltenzahl, die sich nach der
+   Breite richtet, liesse in der letzten Reihe eine einzelne Karte stehen –
+   das sähe nach einem Fehler aus, nicht nach einem Raster. */
+.metric-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; margin-top: 25px; }
+.metric-card { background: var(--surface); box-shadow: 0 0 0 1px var(--line); padding: 18px 20px; display: grid; gap: 2px; align-content: start; }
+.metric-card span { color: var(--accent-dark); font: 600 10px "IBM Plex Mono", monospace; }
+.metric-card strong { font: 600 clamp(19px, 1.7vw, 26px) "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.metric-card small { color: var(--muted); font-size: 11px; }
+
+/* ─── Verläufe ───────────────────────────────────── */
+
+.chart-stack { display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); }
+.chart-card { background: var(--surface); padding: 14px 18px 18px; }
+.chart-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 10px; }
+.chart-title { color: var(--accent-dark); font: 600 10px "IBM Plex Mono", monospace; letter-spacing: .04em; }
+.chart-legend { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font: 11px "IBM Plex Mono", monospace; }
+.swatch { display: inline-block; width: 14px; height: 3px; border-radius: 2px; }
+.swatch + .swatch { margin-left: 10px; }
+.swatch-avg { background: var(--accent); }
+.swatch-peak { background: var(--signal); }
+.swatch-angle { background: var(--accent-soft); }
+.chart-card canvas { display: block; width: 100%; height: 240px; background: #fbfcfb; }
+
+/* ─── Protokoll ──────────────────────────────────── */
+
+.log-box {
+  height: 190px;
+  overflow-y: auto;
+  padding: 14px 18px;
+  border: 1px solid var(--line);
+  background: #fbfcfb;
+  font: 12px/1.7 "IBM Plex Mono", monospace;
+}
+.log-box div { white-space: pre-wrap; }
+.log-box div.is-error { color: var(--danger); }
+.log-box div.is-ok { color: var(--accent-dark); }
+/* Solange nichts geschehen ist, sagt der Kasten das selbst – ein leerer
+   Rahmen wirkte wie ein Fehler. */
+.log-box:empty::before { content: attr(data-empty); color: var(--muted); }
+
+@keyframes reveal { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pulse { 50% { opacity: .3; } }
+
+/* ─── Anpassung an kleine Anzeigen ───────────────── */
+
+@media (max-width: 1100px) {
+  .metric-grid { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 960px) {
+  .stage-shell { grid-template-columns: 1fr; min-height: 0; background: none; }
+  /* Einspaltig steht die Bühne über den Messwerten. Erst diese Höhe gibt ihr
+     Mass – und deckelt sie zugleich, damit die Zahlen darunter im Bild
+     bleiben. `relative` und nicht `static`: Das Feld der Zeichnung hängt mit
+     `inset: 0` an der Bühne. Ohne einen Bezug spannte es sich über die ganze
+     Seite. Dazu gehört `top: auto`: Die Bühne trägt den Wert 76 fürs Kleben,
+     und `relative` nimmt ihn ernst – sie rückte sonst um diesen Betrag nach
+     unten. */
+  .device-stage { position: relative; top: auto; height: 62vh; min-height: 340px; }
+  .dial-svg { width: min(100%, 320px); }
+}
+
+@media (max-width: 640px) {
+  /* Die Kopfzeile darf hier umbrechen und ist damit nicht mehr 76 Pixel hoch.
+     Festgesetzt wäre sie auf so wenig Fläche vor allem verlorene Höhe. */
+  .app-header { position: static; height: auto; min-height: 74px; padding: 12px 16px; flex-wrap: wrap; }
+  .connection-label { display: none; }
+  .panel { padding: 30px 18px 48px; }
+  /* Die Bühne bleibt randlos. Ohne diese Zeile gäbe ihr die Regel darüber
+     einen Rand, den sie auf keiner anderen Breite hat. */
+  .panel-stage { padding: 0; }
+  .stage-main { padding: 30px 18px 48px; }
+
+  /* Auf dem Telefon liegen Beschriftung und Messzeilen nicht mehr über der
+     Zeichnung, sondern darüber und darunter: Auf so wenig Fläche verdeckten
+     sie sonst gerade das, was sie erklären. */
+  .stage-label { padding: 18px 18px 10px; }
+  .stage-readout { padding: 10px 18px 18px; background: none; }
+  .device-stage { height: auto; min-height: 0; }
+  .dial-stage { position: relative; padding: 12px 18px 18px; }
+  .dial-svg { width: 100%; max-width: 280px; }
+
+  .metric-grid { grid-template-columns: 1fr; }
+  .toolbar { align-items: flex-start; flex-direction: column; }
+}
