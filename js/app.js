@@ -37,7 +37,7 @@
   // Das Modell des Türgriffs. Wo es liegt und wie weit sein Hebel schwenkt,
   // steht im Modell selbst. Der Pfad des Moduls ist von dieser Datei aus
   // gerechnet, der des Modells vom Dokument: So verlangt es der Browser.
-  const MODEL_MODULE = "./model3d.js?v=15";
+  const MODEL_MODULE = "./model3d.js?v=16";
   const MODEL_URL = "./assets/models/xensiv_turns_counter.glb";
 
   // Solange das Modell nicht steht, gilt dieser Weg. Er ist derselbe, den das
@@ -93,6 +93,7 @@
   const metricRollAverage = byId("metric-roll-avg");
   const metricRollMaximum = byId("metric-roll-max");
   const metricRate = byId("metric-rate");
+  const sleepingCards = document.querySelectorAll(".metric-card[data-sleeps]");
 
   const currentCanvas = byId("current-chart");
   const angleCanvas = byId("angle-chart");
@@ -663,9 +664,15 @@
   function frame() {
     prune(viewNow());
     updateRolling(performance.now());   // die Messwerte bleiben auch angehalten aktuell
+
+    // Was der Sensor im Schlaf nicht misst, soll auch nicht aussehen, als
+    // wäre es eben gemessen worden.
+    const asleep = isSleeping();
     // `hidden` als Eigenschaft kennt nur HTML; die Zeichnung ist SVG und
     // braucht das Attribut selbst.
-    sleepBadge.toggleAttribute("hidden", !isSleeping());
+    sleepBadge.toggleAttribute("hidden", !asleep);
+    for (const card of sleepingCards) card.classList.toggle("is-asleep", asleep);
+
     drawCharts();
     requestAnimationFrame(frame);
   }
