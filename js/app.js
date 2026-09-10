@@ -31,7 +31,7 @@
   // Das Modell des Türgriffs. Wo es liegt und wie weit sein Hebel schwenkt,
   // steht im Modell selbst. Der Pfad des Moduls ist von dieser Datei aus
   // gerechnet, der des Modells vom Dokument: So verlangt es der Browser.
-  const MODEL_MODULE = "./model3d.js?v=9";
+  const MODEL_MODULE = "./model3d.js?v=10";
   const MODEL_URL = "./assets/models/xensiv_turns_counter.glb";
 
   // Solange das Modell nicht steht, gilt dieser Weg. Er ist derselbe, den das
@@ -70,7 +70,6 @@
   const windowSelect = byId("window-select");
   const pauseButton = byId("pause-button");
   const clearButton = byId("clear-button");
-  const csvButton = byId("csv-button");
   const autoscroll = byId("autoscroll");
   const logBox = byId("log-box");
 
@@ -127,9 +126,6 @@
   const rolling = [];
   const rateStamps = [];
 
-  // Zeilen der CSV-Datei: kind "I" für Strom, "A" für Winkel.
-  const csvRows = [];
-
   // Protokollzeilen, die auf das nächste Bild warten.
   const pendingLog = [];
 
@@ -165,7 +161,6 @@
   sleepInput.addEventListener("keydown", (event) => {
     if (event.key === "Enter") sendSleepTimeout();
   });
-  csvButton.addEventListener("click", downloadCsv);
   clearButton.addEventListener("click", clearData);
   pauseButton.addEventListener("click", togglePause);
   windowSelect.addEventListener("change", () => {
@@ -228,7 +223,6 @@
     setSleepButton.disabled = false;
     sleepInput.disabled = false;
     resetZeroButton.disabled = false;
-    csvButton.disabled = false;
 
     setConnectionState("online", `Connected · ${BAUD_RATE} baud`);
     setLiveState(true, "Reading serial stream");
@@ -262,7 +256,6 @@
     setSleepButton.disabled = true;
     sleepInput.disabled = true;
     resetZeroButton.disabled = true;
-    csvButton.disabled = true;
 
     setConnectionState("offline", "Not connected");
     setLiveState(false, "Not connected");
@@ -431,7 +424,6 @@
     currentPeaks.push(peak);
     rolling.push({ t: now, average, maximum: peak });
     rateStamps.push(now);
-    csvRows.push({ t: now, kind: "I", angle: "", average, peak });
 
     prune(now);
 
@@ -446,7 +438,6 @@
 
     angleTimes.push(now);
     angleValues.push(degrees);
-    csvRows.push({ t: now, kind: "A", angle: degrees, average: "", peak: "" });
 
     // Der erste Winkel nach dem Verbinden legt den Nullpunkt des Griffs fest.
     if (angleZero === null) angleZero = degrees;
@@ -484,7 +475,6 @@
     const start = paused ? -Infinity : now - windowMs;
     trim(currentTimes, [currentAverages, currentPeaks], start);
     trim(angleTimes, [angleValues, travelValues], start);
-    if (csvRows.length > SAFETY_CAP) csvRows.splice(0, csvRows.length - SAFETY_CAP);
   }
 
   function trim(times, series, start) {
@@ -882,7 +872,6 @@
     travelValues.length = 0;
     rolling.length = 0;
     rateStamps.length = 0;
-    csvRows.length = 0;
 
     metricAngle.textContent = "--";
     metricAverage.textContent = "--";
@@ -896,28 +885,6 @@
     logBox.textContent = "";
     pendingLog.length = 0;
     setAck("", "");
-  }
-
-  function downloadCsv() {
-    const origin = csvRows.length ? csvRows[0].t : 0;
-    const header = "t_ms,type,angle_deg,avg_uA,peak_uA\n";
-    const body = csvRows.map((row) => [
-      Math.round(row.t - origin),
-      row.kind,
-      row.angle,
-      row.average === "" ? "" : row.average.toFixed(2),
-      row.peak === "" ? "" : row.peak.toFixed(2),
-    ].join(",")).join("\n");
-
-    const blob = new Blob([`${header}${body}\n`], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
-
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `turns-counter-log-${stamp}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
   }
 
   // ─── Anzeigen ─────────────────────────────────────────
