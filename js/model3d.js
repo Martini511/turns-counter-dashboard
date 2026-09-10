@@ -17,11 +17,12 @@ const HANDLE_NODE = "handle";
 // derselbe, den das Ausfuhrskript einträgt.
 const FALLBACK_TRAVEL = 67.31;
 
-// Blickrichtung ohne Zutun des Betrachters: von schräg vorn auf die Seite, an
-// der der Hebel schwenkt. Der Bolzen liegt quer zur Blickrichtung, damit die
-// Bewegung ihre ganze Höhe zeigt und nicht in der Verkürzung verschwindet.
-// Winkel als Kugelkoordinaten um den Modellmittelpunkt.
-const HOME = { azimuth: 1.15, polar: 1.16 };
+// Blickrichtung ohne Zutun des Betrachters: von schräg oben auf den liegenden
+// Griff, den Hebel nach vorn links, den Sockel mit der Platine nach hinten
+// rechts. Von hier zeigt der Griff seine Oberseite und zugleich den
+// Mechanismus, an dem er schwenkt. Winkel als Kugelkoordinaten um den
+// Modellmittelpunkt.
+const HOME = { azimuth: -0.72, polar: 1.04 };
 const POLAR_LIMITS = [0.3, 1.5];
 
 // Luft zwischen Modell und Bildrand. Grosszügiger als beim Mausmodell: Über
