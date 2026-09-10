@@ -37,7 +37,7 @@
   // Das Modell des Türgriffs. Wo es liegt und wie weit sein Hebel schwenkt,
   // steht im Modell selbst. Der Pfad des Moduls ist von dieser Datei aus
   // gerechnet, der des Modells vom Dokument: So verlangt es der Browser.
-  const MODEL_MODULE = "./model3d.js?v=18";
+  const MODEL_MODULE = "./model3d.js?v=19";
   const MODEL_URL = "./assets/models/xensiv_turns_counter.glb";
 
   // Solange das Modell nicht steht, gilt dieser Weg. Er ist derselbe, den das
@@ -71,6 +71,7 @@
   const liveStateText = byId("live-state-text");
   const sleepInput = byId("sleep-ms");
   const setSleepButton = byId("set-sleep");
+  const orientationSelect = byId("orientation");
   const resetZeroButton = byId("reset-zero");
   const ackLabel = byId("ack");
   const windowSelect = byId("window-select");
@@ -147,6 +148,11 @@
   let angleZero = null;
   let openedAt = 0;
 
+  // In welche Richtung der gemessene Winkel läuft. Liegt der Magnet an der
+  // Rückseite des Bretts, sieht der Sensor sein Feld spiegelbildlich und
+  // zählt gegenläufig; der Griff schwenkt darum nicht anders.
+  let angleDirection = 1;
+
   // Ob der Sensor beim letzten Bild schlief. Der Übergang ist der Augenblick,
   // in dem die Stromkarten geleert werden.
   let wasAsleep = false;
@@ -174,6 +180,11 @@
   });
   clearButton.addEventListener("click", clearData);
   pauseButton.addEventListener("click", togglePause);
+  orientationSelect.addEventListener("change", () => {
+    angleDirection = orientationSelect.value === "back" ? -1 : 1;
+    rebuildTravel();
+    updateHandle(lastAngle);
+  });
   windowSelect.addEventListener("change", () => {
     windowMs = Number.parseInt(windowSelect.value, 10) * 1000;
   });
@@ -601,11 +612,12 @@
     const swing = handleSwing(degrees);
     stageTravel.textContent =
       `${swing.toFixed(1)}° / ${travelLimit.toFixed(1)}°`;
-    if (model) model.setAngle(degrees - angleZero);
+    if (model) model.setAngle(angleDirection * (degrees - angleZero));
   }
 
   function handleSwing(degrees) {
-    return Math.min(Math.max(signedAngle(degrees - angleZero), 0), travelLimit);
+    const swing = angleDirection * signedAngle(degrees - angleZero);
+    return Math.min(Math.max(swing, 0), travelLimit);
   }
 
   // Die aufgezeichnete Auslenkung hängt am Nullpunkt. Verschiebt der sich, gilt

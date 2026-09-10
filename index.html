@@ -14,7 +14,7 @@
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=Source+Sans+3:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
   <!-- Die Fassungsnummer zwingt Browser und Auslieferung dazu, die
        aktuelle Datei zu holen statt einer zwischengespeicherten. -->
-  <link rel="stylesheet" href="./style.css?v=18">
+  <link rel="stylesheet" href="./style.css?v=19">
 </head>
 <body>
 
@@ -114,6 +114,20 @@
                 <span class="unit">ms</span>
               </label>
               <button id="set-sleep" class="secondary-button" disabled>Set</button>
+
+              <!-- Wird das Brett umgedreht, sieht der Sensor das Feld des
+                   Magneten spiegelbildlich: Derselbe Zug am Griff läuft dann
+                   im Winkel rückwärts. Welche Seite dem Magneten zugewandt
+                   ist, weiß nur, wer es aufgebaut hat - deshalb steht es
+                   hier und nicht im Gerät. -->
+              <label class="field"
+                     title="Which side of the board faces the magnet. Turning the board over reverses the direction the handle angle runs.">Magnet at
+                <select id="orientation">
+                  <option value="front" selected>front</option>
+                  <option value="back">back</option>
+                </select>
+              </label>
+
               <!-- Der Nullpunkt gehört zur Ansicht, nicht zum Gerät: Gesetzt
                    wird er hier, geschrieben wird dafür nichts. -->
               <button id="reset-zero" class="text-button" disabled
@@ -212,7 +226,7 @@
   <!-- Die Fassung ist die laufende Nummer des Stands, aus dem diese Seite
        stammt. Sie ist zugleich die Nummer, die Stil und Skript aus dem
        Zwischenspeicher holt. -->
-  <small class="app-version">v18</small>
+  <small class="app-version">v19</small>
 
   <!-- three.js liegt im Projekt statt auf einem fremden Netz: Das Dashboard
        wird oft ohne Internetzugang am Gerät benutzt. Die Zuordnung gilt für
@@ -233,6 +247,6 @@
        Knopf, der die Verbindung aufbaut. So läuft die Seite auch als Datei,
        genau wie die Vorlage, aus der sie stammt. Das Modell holt sie sich
        danach selbst; gelingt das nicht, bleibt es bei der Zeichnung. -->
-  <script src="./js/app.js?v=18"></script>
+  <script src="./js/app.js?v=19"></script>
 </body>
 </html>
