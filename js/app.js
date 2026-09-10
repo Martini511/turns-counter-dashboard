@@ -26,7 +26,6 @@
   const GAP_MS = 250;          // längere Lücken werden nicht überzeichnet
   const SLEEP_IDLE_MS = 400;   // ohne Winkel gilt der Sensor als schlafend
   const SAFETY_CAP = 200000;   // harte Obergrenze der gespeicherten Punkte
-  const LOG_LIMIT = 400;       // Zeilen im Protokollkasten
 
   // Der allererste Winkel nach dem Verbinden taugt nicht als Ruhelage. Beim
   // Öffnen des Anschlusses kommt zuerst, was im Gerät noch im Puffer stand -
@@ -38,7 +37,7 @@
   // Das Modell des Türgriffs. Wo es liegt und wie weit sein Hebel schwenkt,
   // steht im Modell selbst. Der Pfad des Moduls ist von dieser Datei aus
   // gerechnet, der des Modells vom Dokument: So verlangt es der Browser.
-  const MODEL_MODULE = "./model3d.js?v=13";
+  const MODEL_MODULE = "./model3d.js?v=14";
   const MODEL_URL = "./assets/models/xensiv_turns_counter.glb";
 
   // Solange das Modell nicht steht, gilt dieser Weg. Er ist derselbe, den das
@@ -77,8 +76,6 @@
   const windowSelect = byId("window-select");
   const pauseButton = byId("pause-button");
   const clearButton = byId("clear-button");
-  const autoscroll = byId("autoscroll");
-  const logBox = byId("log-box");
 
   const stageAngle = byId("stage-angle");
   const stageTravel = byId("stage-travel");
@@ -101,8 +98,6 @@
   const angleCanvas = byId("angle-chart");
   const currentContext = currentCanvas.getContext("2d");
   const angleContext = angleCanvas.getContext("2d");
-  const chartTabs = document.querySelectorAll(".chart-tab");
-  const chartLegends = document.querySelectorAll(".chart-legend");
 
   // ─── Zustand ──────────────────────────────────────────
 
@@ -135,8 +130,8 @@
   const rolling = [];
   const rateStamps = [];
 
-  // Protokollzeilen, die auf das nächste Bild warten.
-  const pendingLog = [];
+  // Zeilen der CSV-Datei gibt es nicht mehr; was gemessen wird, steht in den
+  // Reihen oben.
 
   // Umdrehungen zählt dieses Gerät nicht: Sein Hebel schwenkt aus der Ruhelage
   // bis an einen Anschlag und wieder zurück. Gezeigt wird deshalb, wie weit er
@@ -174,9 +169,6 @@
   });
   clearButton.addEventListener("click", clearData);
   pauseButton.addEventListener("click", togglePause);
-  for (const tab of chartTabs) {
-    tab.addEventListener("click", () => showChart(tab.dataset.chart));
-  }
   windowSelect.addEventListener("change", () => {
     windowMs = Number.parseInt(windowSelect.value, 10) * 1000;
   });
@@ -221,7 +213,7 @@
       setConnectionState(cancelled ? "offline" : "error",
         cancelled ? "Not connected" : "Connect failed");
       setLiveState(false, "Not connected");
-      if (!cancelled) addLog(`[!]   Connect failed: ${error.message}`, "is-error");
+      if (!cancelled) setAck(`Connect failed: ${error.message}`, "is-error");
       return;
     }
 
@@ -241,7 +233,7 @@
 
     setConnectionState("online", `Connected · ${BAUD_RATE} baud`);
     setLiveState(true, "Reading serial stream");
-    addLog(`[OK]  Port open at ${BAUD_RATE} baud`, "is-ok");
+    setAck("", "");
 
     readLoop();
     querySleepTimeout();
@@ -273,8 +265,7 @@
     resetZeroButton.disabled = true;
 
     setConnectionState("offline", "Not connected");
-    setLiveState(false, "Not connected");
-    addLog(`[!]   ${reason}`);
+    setLiveState(false, reason);
   }
 
   // Gelesen werden rohe Bytes, damit ein nicht tödlicher Fehler des Stroms –
@@ -293,7 +284,10 @@
         overrunCount += 1;
         const now = performance.now();
         if (now - lastOverrunLog > 1000) {
-          addLog(`[!]   ${error.message} (recovered, x${overrunCount})`, "is-error");
+          // Der Kopf sagt, dass es passiert und wie oft; was genau, steht in
+          // der Entwicklerkonsole - auf der Seite wäre es eine Meldung, mit
+          // der niemand etwas anfangen kann.
+          console.warn("serial stream recovered", error);
           setConnectionState("online", `Connected · overruns ${overrunCount}`);
           lastOverrunLog = now;
         }
@@ -389,10 +383,6 @@
     const line = rawLine.replace(/\r$/, "");
     if (line.length === 0) return;
 
-    // Das Protokoll zeigt jede Zeile, die das Gerät schickt – auch die
-    // Winkelzeilen. Was ausgewertet wird, steht daneben in den Messwerten.
-    addLog(line, lineClass(line));
-
     // Kurze Winkelzeile "a<grad>", daneben die ältere Form "angle <grad> deg".
     const angleMatch = /^a(?:ngle\s+)?(-?\d+)(?:\s*deg)?$/i.exec(line);
     if (angleMatch) {
@@ -414,12 +404,6 @@
     }
 
     if (/sensor\s+SLEEP/i.test(line)) sensorSleeping = true;
-  }
-
-  function lineClass(line) {
-    if (/^ERR\b/i.test(line)) return "is-error";
-    if (/^OK\b/i.test(line)) return "is-ok";
-    return "";
   }
 
   // Roher 12-Bit-Wert des Wandlers in Mikroampere. Die Umrechnung liegt hier
@@ -459,7 +443,7 @@
     if (angleZero === null && now - openedAt >= ZERO_SETTLE_MS) {
       angleZero = degrees;
       rebuildTravel();
-      addLog(`[OK]  Handle zero set at ${degrees}°`, "is-ok");
+      setAck(`Handle zero at ${degrees}°`, "is-ok");
     }
 
     // Ohne Nullpunkt gibt es noch keine Auslenkung. Die Reihe braucht
@@ -559,7 +543,7 @@
       const { HandleModel } = await import(MODEL_MODULE);
       model = await new HandleModel(handleCanvas).load(MODEL_URL);
     } catch (error) {
-      addLog(`[!]   3D model unavailable: ${error.message}`);
+      console.warn("3D model unavailable, the drawing stays.", error);
       return;
     }
     handleCanvas.hidden = false;
@@ -642,14 +626,14 @@
       angleZero = null;
       stageTravel.textContent = "–";
       if (model) model.reset();
-      addLog("[OK]  Handle zero cleared, next reading sets it", "is-ok");
+      setAck("Handle zero cleared, next reading sets it", "is-ok");
       return;
     }
 
     angleZero = lastAngle;
     rebuildTravel();
     updateHandle(lastAngle);
-    addLog(`[OK]  Handle zero set at ${lastAngle}°`, "is-ok");
+    setAck(`Handle zero at ${lastAngle}°`, "is-ok");
   }
 
   // Der Bogen läuft von der Null im Uhrzeigersinn bis zur aktuellen Stellung.
@@ -676,31 +660,12 @@
 
   // ─── Verläufe ─────────────────────────────────────────
 
-  // Gezeigt wird ein Verlauf, gezeichnet werden beide - der verborgene hat
-  // keine Fläche, und `drawPlot` lässt ihn deshalb von selbst aus. So ist der
-  // andere beim Umschalten sofort da, ohne dass hier etwas nachgeholt werden
-  // müsste.
-  function showChart(which) {
-    for (const tab of chartTabs) {
-      const chosen = tab.dataset.chart === which;
-      tab.classList.toggle("is-active", chosen);
-      tab.setAttribute("aria-selected", chosen ? "true" : "false");
-    }
-    for (const legend of chartLegends) {
-      legend.toggleAttribute("hidden", legend.dataset.legend !== which);
-    }
-    currentCanvas.toggleAttribute("hidden", which !== "current");
-    angleCanvas.toggleAttribute("hidden", which !== "angle");
-    drawCharts();
-  }
-
   function frame() {
     prune(viewNow());
     updateRolling(performance.now());   // die Messwerte bleiben auch angehalten aktuell
     // `hidden` als Eigenschaft kennt nur HTML; die Zeichnung ist SVG und
     // braucht das Attribut selbst.
     sleepBadge.toggleAttribute("hidden", !isSleeping());
-    flushLog();
     drawCharts();
     requestAnimationFrame(frame);
   }
@@ -923,8 +888,6 @@
     stageRate.textContent = "–";
 
     updateHandle(null);
-    logBox.textContent = "";
-    pendingLog.length = 0;
     setAck("", "");
   }
 
@@ -943,32 +906,5 @@
   function setAck(text, className) {
     ackLabel.textContent = text;
     ackLabel.className = className ? `ack ${className}` : "ack";
-  }
-
-  function addLog(text, className) {
-    // Bei voller Rate kommen mehr Zeilen an, als ein Bild zeigen kann. Sie
-    // warten deshalb, bis das nächste Bild sie gemeinsam einträgt – ein
-    // Eintrag je Zeile hielte den Aufbau der Seite auf.
-    pendingLog.push({ text, className });
-    if (pendingLog.length > LOG_LIMIT) pendingLog.splice(0, pendingLog.length - LOG_LIMIT);
-  }
-
-  function flushLog() {
-    if (!pendingLog.length) return;
-
-    const batch = document.createDocumentFragment();
-    for (const entry of pendingLog) {
-      const line = document.createElement("div");
-      // `textContent` statt `innerHTML`: Was das Gerät schickt, ist Text und
-      // wird nie zu Markup.
-      line.textContent = entry.text;
-      if (entry.className) line.className = entry.className;
-      batch.append(line);
-    }
-    pendingLog.length = 0;
-    logBox.append(batch);
-
-    while (logBox.childElementCount > LOG_LIMIT) logBox.firstElementChild.remove();
-    if (autoscroll.checked) logBox.scrollTop = logBox.scrollHeight;
   }
 })();

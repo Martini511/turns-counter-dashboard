@@ -349,9 +349,6 @@ h1, h2 { margin: 4px 0 0; font-size: clamp(22px, 2vw, 32px); line-height: 1.05; 
 .ack.is-ok { color: var(--accent-dark); }
 .ack.is-error { color: var(--danger); }
 
-.checkbox-field { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; }
-.checkbox-field input { width: 15px; height: 15px; accent-color: var(--accent); }
-
 .chart-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 
 /* ─── Messwertkarten ─────────────────────────────── */
@@ -369,48 +366,23 @@ h1, h2 { margin: 4px 0 0; font-size: clamp(22px, 2vw, 32px); line-height: 1.05; 
 
 /* ─── Verläufe ───────────────────────────────────── */
 
-/* Ein Verlauf zur Zeit, über die ganze Breite der Spalte. Welcher, sagen die
-   Reiter im Kopf der Karte – in derselben Schrift wie zuvor die Überschrift,
-   denn sie sind es jetzt. Die Höhe folgt dem, was die Spalte übrig lässt. */
+/* Beide Verläufe untereinander, jeder über die ganze Breite der Spalte. Die
+   Höhe teilen sie sich zu gleichen Teilen und folgen dabei dem, was die
+   Spalte übrig lässt – ein hoher Schirm gibt hohe Verläufe, ein flacher
+   flache. */
 .chart-stack {
   flex: 1 1 auto;
-  min-height: 180px;
+  min-height: 300px;
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 1px;
   background: var(--line);
   border: 1px solid var(--line);
 }
-.chart-card { background: var(--surface); padding: 12px 16px 14px; min-width: 0; display: flex; flex-direction: column; }
-.chart-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
-
-.chart-tabs { display: flex; }
-.chart-tab {
-  position: relative;
-  padding: 3px 0 7px;
-  border: 0;
-  background: transparent;
-  color: var(--muted);
-  font: 600 10px "IBM Plex Mono", monospace;
-  letter-spacing: .04em;
-}
-.chart-tab + .chart-tab { margin-left: 22px; }
-.chart-tab:hover { color: var(--ink); }
-.chart-tab.is-active { color: var(--accent-dark); }
-/* Der Strich sitzt auf der Grundlinie der Reiterzeile, nicht unter der Karte:
-   Er gehört zum gewählten Namen, nicht zum Kopf. */
-.chart-tab.is-active::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 2px;
-  background: var(--accent);
-}
-.chart-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.chart-card { background: var(--surface); padding: 8px 16px 10px; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.chart-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 5px; }
 .chart-title { color: var(--accent-dark); font: 600 10px "IBM Plex Mono", monospace; letter-spacing: .04em; }
 .chart-legend { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font: 11px "IBM Plex Mono", monospace; }
-.chart-legend[hidden] { display: none; }
 .swatch { display: inline-block; width: 14px; height: 3px; border-radius: 2px; }
 .swatch + .swatch { margin-left: 10px; }
 .swatch-avg { background: var(--accent); }
@@ -429,68 +401,9 @@ h1, h2 { margin: 4px 0 0; font-size: clamp(22px, 2vw, 32px); line-height: 1.05; 
   flex: 1 1 auto;
   width: 100%;
   height: 0;
-  min-height: 120px;
+  min-height: 112px;
   background: #fbfcfb;
 }
-.chart-card canvas[hidden] { display: none; }
-
-/* ─── Aufklappbereich ────────────────────────────── */
-/* Aufbau und Masse wie im Maus-Konfigurator, damit ein Aufklappbereich hier
-   aussieht wie dort. */
-
-.accordion { margin-top: 16px; border: 1px solid var(--line); background: var(--surface); }
-
-.accordion > summary {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  padding: 12px 20px;
-  cursor: pointer;
-  list-style: none;
-  font-weight: 700;
-}
-
-.accordion > summary::-webkit-details-marker { display: none; }
-.accordion > summary::after {
-  content: "";
-  margin-left: auto;
-  width: 9px;
-  height: 9px;
-  border-right: 2px solid var(--muted);
-  border-bottom: 2px solid var(--muted);
-  transform: rotate(45deg) translate(-3px, -3px);
-  transition: transform .2s;
-}
-.accordion[open] > summary::after { transform: rotate(-135deg) translate(-3px, -3px); }
-.accordion[open] > summary { border-bottom: 1px solid var(--line); }
-.accordion > summary:hover { background: #f7f9f9; }
-.accordion > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-
-.accordion-title { display: grid; gap: 1px; font-size: 15px; }
-.accordion-title small { color: var(--muted); font-size: 12px; font-weight: 400; }
-.accordion-body { padding: 16px 20px 18px; }
-
-/* ─── Protokoll ──────────────────────────────────── */
-
-/* Der Schalter für den Gleichlauf gehört zum Protokoll, nicht zu dessen
-   Überschrift: Im Aufklapper säße er auf der Schaltfläche, die ihn zuklappt,
-   und jeder Griff nach ihm schlösse den Kasten. */
-.log-tools { display: flex; justify-content: flex-end; margin-bottom: 10px; }
-
-.log-box {
-  height: clamp(120px, 18vh, 190px);
-  overflow-y: auto;
-  padding: 14px 18px;
-  border: 1px solid var(--line);
-  background: #fbfcfb;
-  font: 12px/1.7 "IBM Plex Mono", monospace;
-}
-.log-box div { white-space: pre-wrap; }
-.log-box div.is-error { color: var(--danger); }
-.log-box div.is-ok { color: var(--accent-dark); }
-/* Solange nichts geschehen ist, sagt der Kasten das selbst – ein leerer
-   Rahmen wirkte wie ein Fehler. */
-.log-box:empty::before { content: attr(data-empty); color: var(--muted); }
 
 @keyframes reveal { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes pulse { 50% { opacity: .3; } }
