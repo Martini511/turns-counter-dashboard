@@ -31,7 +31,7 @@
   // Das Modell des Türgriffs. Wo es liegt und wie weit sein Hebel schwenkt,
   // steht im Modell selbst. Der Pfad des Moduls ist von dieser Datei aus
   // gerechnet, der des Modells vom Dokument: So verlangt es der Browser.
-  const MODEL_MODULE = "./model3d.js?v=8";
+  const MODEL_MODULE = "./model3d.js?v=9";
   const MODEL_URL = "./assets/models/xensiv_turns_counter.glb";
 
   // Solange das Modell nicht steht, gilt dieser Weg. Er ist derselbe, den das
@@ -47,6 +47,10 @@
     average: "#0a8a7c",
     peak: "#eb7000",
     angle: "#12a190",
+    travel: "#12262b",
+    // Schläft der Sensor, misst niemand. Der gehaltene Wert bekommt deshalb
+    // ein Grau: Es ist kein Messwert, sondern der letzte, der noch gilt.
+    asleep: "#9fb0b2",
   };
 
   const byId = (id) => document.getElementById(id);
@@ -113,9 +117,10 @@
   const currentAverages = [];
   const currentPeaks = [];
 
-  // Winkelreihe.
+  // Winkelreihe: was der Sensor misst, und was der Griff daraus macht.
   const angleTimes = [];
   const angleValues = [];
+  const travelValues = [];
 
   // Gleitendes Fenster {t, average, maximum} und die Zeitpunkte der letzten
   // Sekunde für die Paketrate.
@@ -445,6 +450,7 @@
 
     // Der erste Winkel nach dem Verbinden legt den Nullpunkt des Griffs fest.
     if (angleZero === null) angleZero = degrees;
+    travelValues.push(handleSwing(degrees));
 
     prune(now);
 
@@ -477,7 +483,7 @@
     // noch der Speicher.
     const start = paused ? -Infinity : now - windowMs;
     trim(currentTimes, [currentAverages, currentPeaks], start);
-    trim(angleTimes, [angleValues], start);
+    trim(angleTimes, [angleValues, travelValues], start);
     if (csvRows.length > SAFETY_CAP) csvRows.splice(0, csvRows.length - SAFETY_CAP);
   }
 
@@ -545,6 +551,7 @@
     handleCanvas.hidden = false;
     handleStage.classList.add("has-model");
     travelLimit = model.limit;
+    rebuildTravel();
     updateHandle(lastAngle);
   }
 
@@ -582,11 +589,27 @@
     // Der Hebel steht in der Ruhelage oder irgendwo davor seinem Anschlag.
     // Ein Winkel jenseits der halben Umdrehung ist eine Auslenkung in die
     // Gegenrichtung und damit die Ruhelage – nicht der Anschlag.
-    const swing = Math.min(Math.max(signedAngle(degrees - angleZero), 0),
-      travelLimit);
+    const swing = handleSwing(degrees);
     stageTravel.textContent =
       `${swing.toFixed(1)}° / ${travelLimit.toFixed(1)}°`;
     if (model) model.setAngle(degrees - angleZero);
+  }
+
+  function handleSwing(degrees) {
+    return Math.min(Math.max(signedAngle(degrees - angleZero), 0), travelLimit);
+  }
+
+  // Die aufgezeichnete Auslenkung hängt am Nullpunkt. Verschiebt der sich, gilt
+  // der neue rückwirkend: Der Verlauf zeigt den Griff, wie er zur jetzigen
+  // Null steht, und nicht zu einer, die niemand mehr sieht.
+  function rebuildTravel() {
+    if (angleZero === null) {
+      travelValues.length = 0;
+      return;
+    }
+    for (let index = 0; index < angleValues.length; index += 1) {
+      travelValues[index] = handleSwing(angleValues[index]);
+    }
   }
 
   // Der kürzeste Weg zurück in den halben Kreis: 355 Grad sind fünf Grad in
@@ -610,6 +633,7 @@
     }
 
     angleZero = lastAngle;
+    rebuildTravel();
     updateHandle(lastAngle);
     addLog(`[OK]  Handle zero set at ${lastAngle}°`, "is-ok");
   }
@@ -657,7 +681,19 @@
 
     drawPlot(angleCanvas, angleContext, angleTimes, [
       { data: angleValues, color: PALETTE.angle, width: 1.8 },
-    ], { fixed: true, minimum: 0, maximum: 360 });
+      { data: travelValues, color: PALETTE.travel, width: 1.8 },
+    ], {
+      fixed: true,
+      minimum: 0,
+      maximum: 360,
+      // Schläft der Sensor, bricht die Linie nicht ab: Der Griff steht ja
+      // weiter, wo er stand. Sie läuft waagerecht weiter und wechselt dabei
+      // die Farbe – gemessen ist dieser Abschnitt nicht. Bis an den rechten
+      // Rand reicht er nur, solange eine Verbindung besteht; ohne sie ist
+      // nichts zu halten, sondern schlicht Schluss.
+      holdColor: PALETTE.asleep,
+      holdUntil: port ? viewNow() : null,
+    });
   }
 
   // Zeichnet eine oder mehrere Reihen, die sich Zeitachse und Wertebereich
@@ -765,16 +801,17 @@
     context.clip();
 
     for (const entry of series) {
-      if (entry.data.length < 2) continue;
+      if (!entry.data.length) continue;
 
+      // Erst das Gemessene. Über Lücken hebt der Stift ab: Zwischen zwei
+      // Meldungen ist nichts gemessen, und eine Linie dort behauptete einen
+      // Verlauf, den niemand gesehen hat.
       context.strokeStyle = entry.color;
       context.lineWidth = entry.width || 1.6;
       context.beginPath();
 
       let penDown = false;
       for (let index = 0; index < entry.data.length; index += 1) {
-        // Über Lücken – etwa während des Schlafs – hebt der Stift ab, damit
-        // nichts dazwischen behauptet wird, was niemand gemessen hat.
         if (index > 0 && times[index] - times[index - 1] > GAP_MS) penDown = false;
         const x = xOf(times[index]);
         const y = yOf(entry.data[index]);
@@ -783,6 +820,32 @@
           context.moveTo(x, y);
           penDown = true;
         }
+      }
+      context.stroke();
+
+      if (!options.holdColor) continue;
+
+      // Dann das Gehaltene. Wo der Winkel gemeint ist, steht das Gerät auch
+      // während des Schlafs irgendwo - der letzte Wert gilt weiter, bis ein
+      // neuer kommt. Die Senkrechte am Ende sagt, dass er sich in dieser
+      // Zeit geändert hat, ohne zu behaupten, wann.
+      context.strokeStyle = options.holdColor;
+      context.beginPath();
+
+      for (let index = 1; index < entry.data.length; index += 1) {
+        if (times[index] - times[index - 1] <= GAP_MS) continue;
+        const held = yOf(entry.data[index - 1]);
+        context.moveTo(xOf(times[index - 1]), held);
+        context.lineTo(xOf(times[index]), held);
+        context.lineTo(xOf(times[index]), yOf(entry.data[index]));
+      }
+
+      const last = entry.data.length - 1;
+      if (options.holdUntil !== null
+        && options.holdUntil - times[last] > GAP_MS) {
+        const held = yOf(entry.data[last]);
+        context.moveTo(xOf(times[last]), held);
+        context.lineTo(xOf(options.holdUntil), held);
       }
 
       context.stroke();
@@ -816,6 +879,7 @@
     currentPeaks.length = 0;
     angleTimes.length = 0;
     angleValues.length = 0;
+    travelValues.length = 0;
     rolling.length = 0;
     rateStamps.length = 0;
     csvRows.length = 0;
