@@ -369,24 +369,48 @@ h1, h2 { margin: 4px 0 0; font-size: clamp(22px, 2vw, 32px); line-height: 1.05; 
 
 /* ─── Verläufe ───────────────────────────────────── */
 
-/* Nebeneinander statt übereinander: Zwei Verläufe von je einem halben Meter
-   Breite sagen nicht mehr als zwei von einem viertel – gestapelt kosten sie
-   aber die Höhe, die das Fenster gar nicht hat. Die Höhe der Zeichenfläche
-   folgt dem Fenster, damit auf einem flachen Schirm nichts über die Kante
-   gerät. */
+/* Ein Verlauf zur Zeit, über die ganze Breite der Spalte. Welcher, sagen die
+   Reiter im Kopf der Karte – in derselben Schrift wie zuvor die Überschrift,
+   denn sie sind es jetzt. Die Höhe folgt dem, was die Spalte übrig lässt. */
 .chart-stack {
   flex: 1 1 auto;
   min-height: 180px;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1px;
+  grid-template-columns: 1fr;
   background: var(--line);
   border: 1px solid var(--line);
 }
 .chart-card { background: var(--surface); padding: 12px 16px 14px; min-width: 0; display: flex; flex-direction: column; }
 .chart-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+
+.chart-tabs { display: flex; }
+.chart-tab {
+  position: relative;
+  padding: 3px 0 7px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: 600 10px "IBM Plex Mono", monospace;
+  letter-spacing: .04em;
+}
+.chart-tab + .chart-tab { margin-left: 22px; }
+.chart-tab:hover { color: var(--ink); }
+.chart-tab.is-active { color: var(--accent-dark); }
+/* Der Strich sitzt auf der Grundlinie der Reiterzeile, nicht unter der Karte:
+   Er gehört zum gewählten Namen, nicht zum Kopf. */
+.chart-tab.is-active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--accent);
+}
+.chart-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .chart-title { color: var(--accent-dark); font: 600 10px "IBM Plex Mono", monospace; letter-spacing: .04em; }
 .chart-legend { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font: 11px "IBM Plex Mono", monospace; }
+.chart-legend[hidden] { display: none; }
 .swatch { display: inline-block; width: 14px; height: 3px; border-radius: 2px; }
 .swatch + .swatch { margin-left: 10px; }
 .swatch-avg { background: var(--accent); }
@@ -408,6 +432,7 @@ h1, h2 { margin: 4px 0 0; font-size: clamp(22px, 2vw, 32px); line-height: 1.05; 
   min-height: 120px;
   background: #fbfcfb;
 }
+.chart-card canvas[hidden] { display: none; }
 
 /* ─── Aufklappbereich ────────────────────────────── */
 /* Aufbau und Masse wie im Maus-Konfigurator, damit ein Aufklappbereich hier
@@ -473,14 +498,9 @@ h1, h2 { margin: 4px 0 0; font-size: clamp(22px, 2vw, 32px); line-height: 1.05; 
 /* ─── Anpassung an kleine Anzeigen ───────────────── */
 
 /* Sechs Karten nebeneinander brauchen Breite. Reicht sie nicht, werden es
-   drei und dann zwei; die Verläufe rücken übereinander, sobald einer von
-   ihnen schmaler wäre als seine Beschriftung. */
+   drei und dann zwei. */
 @media (max-width: 1300px) {
   .metric-grid { grid-template-columns: repeat(3, 1fr); }
-}
-
-@media (max-width: 1240px) {
-  .chart-stack { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 1100px) {

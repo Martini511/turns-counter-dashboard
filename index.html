@@ -14,7 +14,7 @@
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=Source+Sans+3:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
   <!-- Die Fassungsnummer zwingt Browser und Auslieferung dazu, die
        aktuelle Datei zu holen statt einer zwischengespeicherten. -->
-  <link rel="stylesheet" href="./style.css?v=12">
+  <link rel="stylesheet" href="./style.css?v=13">
 </head>
 <body>
 
@@ -162,27 +162,37 @@
             </div>
           </div>
 
+          <!-- Ein Verlauf zur Zeit, dafür über die ganze Breite. Nebeneinander
+               war jeder halb so breit, und ein Fenster von fünf Minuten wurde
+               darin zum Gedränge. Die Reiter tragen den Namen des Verlaufs;
+               daneben steht die Legende dessen, der gerade zu sehen ist. -->
           <div class="chart-stack">
             <div class="chart-card">
               <div class="chart-head">
-                <span class="chart-title">CURRENT &middot; &micro;A</span>
-                <span class="chart-legend">
+                <div class="chart-tabs" role="tablist" aria-label="Plot">
+                  <button type="button" class="chart-tab is-active" role="tab"
+                          id="tab-current" data-chart="current"
+                          aria-selected="true" aria-controls="current-chart">CURRENT &middot; &micro;A</button>
+                  <button type="button" class="chart-tab" role="tab"
+                          id="tab-angle" data-chart="angle"
+                          aria-selected="false" aria-controls="angle-chart">ANGLE &middot; DEGREES</button>
+                </div>
+
+                <span class="chart-legend" data-legend="current">
                   <i class="swatch swatch-avg"></i>average
                   <i class="swatch swatch-peak"></i>peak
                 </span>
-              </div>
-              <canvas id="current-chart" aria-label="Current over time"></canvas>
-            </div>
-            <div class="chart-card">
-              <div class="chart-head">
-                <span class="chart-title">ANGLE &middot; DEGREES</span>
-                <span class="chart-legend">
+                <span class="chart-legend" data-legend="angle" hidden>
                   <i class="swatch swatch-angle"></i>sensor
                   <i class="swatch swatch-travel"></i>handle
                   <i class="swatch swatch-asleep"></i>asleep
                 </span>
               </div>
-              <canvas id="angle-chart" aria-label="Angle over time"></canvas>
+
+              <canvas id="current-chart" role="tabpanel" aria-labelledby="tab-current"
+                      aria-label="Current over time"></canvas>
+              <canvas id="angle-chart" role="tabpanel" aria-labelledby="tab-angle" hidden
+                      aria-label="Angle over time"></canvas>
             </div>
           </div>
 
@@ -228,7 +238,7 @@
   <!-- Die Fassung ist die laufende Nummer des Stands, aus dem diese Seite
        stammt. Sie ist zugleich die Nummer, die Stil und Skript aus dem
        Zwischenspeicher holt. -->
-  <small class="app-version">v12</small>
+  <small class="app-version">v13</small>
 
   <!-- three.js liegt im Projekt statt auf einem fremden Netz: Das Dashboard
        wird oft ohne Internetzugang am Gerät benutzt. Die Zuordnung gilt für
@@ -249,6 +259,6 @@
        Knopf, der die Verbindung aufbaut. So läuft die Seite auch als Datei,
        genau wie die Vorlage, aus der sie stammt. Das Modell holt sie sich
        danach selbst; gelingt das nicht, bleibt es bei der Zeichnung. -->
-  <script src="./js/app.js?v=12"></script>
+  <script src="./js/app.js?v=13"></script>
 </body>
 </html>

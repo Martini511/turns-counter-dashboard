@@ -38,7 +38,7 @@
   // Das Modell des Türgriffs. Wo es liegt und wie weit sein Hebel schwenkt,
   // steht im Modell selbst. Der Pfad des Moduls ist von dieser Datei aus
   // gerechnet, der des Modells vom Dokument: So verlangt es der Browser.
-  const MODEL_MODULE = "./model3d.js?v=12";
+  const MODEL_MODULE = "./model3d.js?v=13";
   const MODEL_URL = "./assets/models/xensiv_turns_counter.glb";
 
   // Solange das Modell nicht steht, gilt dieser Weg. Er ist derselbe, den das
@@ -101,6 +101,8 @@
   const angleCanvas = byId("angle-chart");
   const currentContext = currentCanvas.getContext("2d");
   const angleContext = angleCanvas.getContext("2d");
+  const chartTabs = document.querySelectorAll(".chart-tab");
+  const chartLegends = document.querySelectorAll(".chart-legend");
 
   // ─── Zustand ──────────────────────────────────────────
 
@@ -172,6 +174,9 @@
   });
   clearButton.addEventListener("click", clearData);
   pauseButton.addEventListener("click", togglePause);
+  for (const tab of chartTabs) {
+    tab.addEventListener("click", () => showChart(tab.dataset.chart));
+  }
   windowSelect.addEventListener("change", () => {
     windowMs = Number.parseInt(windowSelect.value, 10) * 1000;
   });
@@ -671,6 +676,24 @@
 
   // ─── Verläufe ─────────────────────────────────────────
 
+  // Gezeigt wird ein Verlauf, gezeichnet werden beide - der verborgene hat
+  // keine Fläche, und `drawPlot` lässt ihn deshalb von selbst aus. So ist der
+  // andere beim Umschalten sofort da, ohne dass hier etwas nachgeholt werden
+  // müsste.
+  function showChart(which) {
+    for (const tab of chartTabs) {
+      const chosen = tab.dataset.chart === which;
+      tab.classList.toggle("is-active", chosen);
+      tab.setAttribute("aria-selected", chosen ? "true" : "false");
+    }
+    for (const legend of chartLegends) {
+      legend.toggleAttribute("hidden", legend.dataset.legend !== which);
+    }
+    currentCanvas.toggleAttribute("hidden", which !== "current");
+    angleCanvas.toggleAttribute("hidden", which !== "angle");
+    drawCharts();
+  }
+
   function frame() {
     prune(viewNow());
     updateRolling(performance.now());   // die Messwerte bleiben auch angehalten aktuell
@@ -687,7 +710,6 @@
       { data: currentPeaks, color: PALETTE.peak, width: 1.4 },
       { data: currentAverages, color: PALETTE.average, width: 1.8 },
     ], { fixed: false });
-
     drawPlot(angleCanvas, angleContext, angleTimes, [
       { data: angleValues, color: PALETTE.angle, width: 1.8 },
       { data: travelValues, color: PALETTE.travel, width: 1.8 },
