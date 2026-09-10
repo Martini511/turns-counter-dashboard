@@ -28,10 +28,17 @@
   const SAFETY_CAP = 200000;   // harte Obergrenze der gespeicherten Punkte
   const LOG_LIMIT = 400;       // Zeilen im Protokollkasten
 
+  // Der allererste Winkel nach dem Verbinden taugt nicht als Ruhelage. Beim
+  // Öffnen des Anschlusses kommt zuerst, was im Gerät noch im Puffer stand -
+  // Meldungen von vorhin, als der Griff womoeglich anders stand -, und der
+  // Sensor braucht nach dem Aufwachen einen Augenblick, bis er trifft. Erst
+  // eine Meldung nach dieser Frist wird zum Nullpunkt.
+  const ZERO_SETTLE_MS = 500;
+
   // Das Modell des Türgriffs. Wo es liegt und wie weit sein Hebel schwenkt,
   // steht im Modell selbst. Der Pfad des Moduls ist von dieser Datei aus
   // gerechnet, der des Modells vom Dokument: So verlangt es der Browser.
-  const MODEL_MODULE = "./model3d.js?v=10";
+  const MODEL_MODULE = "./model3d.js?v=11";
   const MODEL_URL = "./assets/models/xensiv_turns_counter.glb";
 
   // Solange das Modell nicht steht, gilt dieser Weg. Er ist derselbe, den das
@@ -136,9 +143,11 @@
   let lastAngle = null;
   let travelLimit = HANDLE_TRAVEL;
 
-  // Der Winkel, der als Ruhelage des Griffs gilt. Null ist ein gültiger Wert,
-  // "noch keiner" ist etwas anderes - deshalb null und nicht 0.
+  // Der Winkel, der als Ruhelage des Griffs gilt, und der Augenblick, seit dem
+  // der Anschluss offen ist. Null ist ein gültiger Winkel, "noch keiner" ist
+  // etwas anderes - deshalb null und nicht 0.
   let angleZero = null;
+  let openedAt = 0;
 
   // ─── Bytestrom ────────────────────────────────────────
 
@@ -217,6 +226,7 @@
 
     // Jede Verbindung beginnt ohne Nullpunkt: Der erste Winkel setzt ihn.
     angleZero = null;
+    openedAt = performance.now();
 
     connectButton.hidden = true;
     disconnectButton.hidden = false;
@@ -439,9 +449,18 @@
     angleTimes.push(now);
     angleValues.push(degrees);
 
-    // Der erste Winkel nach dem Verbinden legt den Nullpunkt des Griffs fest.
-    if (angleZero === null) angleZero = degrees;
-    travelValues.push(handleSwing(degrees));
+    // Die erste Meldung nach der Einschwingfrist legt den Nullpunkt fest. Die
+    // Winkel davor bekommen ihren Bezug nachträglich.
+    if (angleZero === null && now - openedAt >= ZERO_SETTLE_MS) {
+      angleZero = degrees;
+      rebuildTravel();
+      addLog(`[OK]  Handle zero set at ${degrees}°`, "is-ok");
+    }
+
+    // Ohne Nullpunkt gibt es noch keine Auslenkung. Die Reihe braucht
+    // trotzdem einen Eintrag, sonst gerät sie gegen die Zeitachse aus dem
+    // Tritt; sobald der Nullpunkt steht, holt `rebuildTravel` ihn nach.
+    travelValues.push(angleZero === null ? 0 : handleSwing(degrees));
 
     prune(now);
 
