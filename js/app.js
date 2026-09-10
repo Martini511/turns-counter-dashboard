@@ -31,7 +31,7 @@
   // Das Modell des Türgriffs. Wo es liegt und wie weit sein Hebel schwenkt,
   // steht im Modell selbst. Der Pfad des Moduls ist von dieser Datei aus
   // gerechnet, der des Modells vom Dokument: So verlangt es der Browser.
-  const MODEL_MODULE = "./model3d.js?v=3";
+  const MODEL_MODULE = "./model3d.js?v=4";
   const MODEL_URL = "./assets/models/xensiv_turns_counter.glb";
 
   // Solange das Modell nicht steht, gilt dieser Weg. Er ist derselbe, den das
@@ -61,6 +61,7 @@
   const liveStateText = byId("live-state-text");
   const sleepInput = byId("sleep-ms");
   const setSleepButton = byId("set-sleep");
+  const resetZeroButton = byId("reset-zero");
   const ackLabel = byId("ack");
   const windowSelect = byId("window-select");
   const pauseButton = byId("pause-button");
@@ -134,6 +135,10 @@
   let lastAngle = null;
   let travelLimit = HANDLE_TRAVEL;
 
+  // Der Winkel, der als Ruhelage des Griffs gilt. Null ist ein gültiger Wert,
+  // "noch keiner" ist etwas anderes - deshalb null und nicht 0.
+  let angleZero = null;
+
   // ─── Bytestrom ────────────────────────────────────────
 
   const packet = new Uint8Array(PACKET_LENGTH);
@@ -151,6 +156,7 @@
   connectButton.addEventListener("click", connect);
   disconnectButton.addEventListener("click", () => disconnect("Connection released"));
   setSleepButton.addEventListener("click", sendSleepTimeout);
+  resetZeroButton.addEventListener("click", resetZero);
   sleepInput.addEventListener("keydown", (event) => {
     if (event.key === "Enter") sendSleepTimeout();
   });
@@ -209,10 +215,14 @@
     keepReading = true;
     overrunCount = 0;
 
+    // Jede Verbindung beginnt ohne Nullpunkt: Der erste Winkel setzt ihn.
+    angleZero = null;
+
     connectButton.hidden = true;
     disconnectButton.hidden = false;
     setSleepButton.disabled = false;
     sleepInput.disabled = false;
+    resetZeroButton.disabled = false;
     csvButton.disabled = false;
 
     setConnectionState("online", `Connected · ${BAUD_RATE} baud`);
@@ -240,11 +250,13 @@
     sawSync0 = false;
     asciiBuffer = "";
     sensorSleeping = false;
+    angleZero = null;
 
     connectButton.hidden = false;
     disconnectButton.hidden = true;
     setSleepButton.disabled = true;
     sleepInput.disabled = true;
+    resetZeroButton.disabled = true;
     csvButton.disabled = true;
 
     setConnectionState("offline", "Not connected");
@@ -431,6 +443,9 @@
     angleValues.push(degrees);
     csvRows.push({ t: now, kind: "A", angle: degrees, average: "", peak: "" });
 
+    // Der erste Winkel nach dem Verbinden legt den Nullpunkt des Griffs fest.
+    if (angleZero === null) angleZero = degrees;
+
     prune(now);
 
     metricAngle.textContent = `${degrees}°`;
@@ -554,14 +569,40 @@
     dialArc.setAttribute("d", arcPath(degrees));
     stageAngle.textContent = `${degrees}\u00b0`;
 
+    // Der Sensor misst absolut, der Griff nicht: Wo sein Magnet in der
+    // Ruhelage steht, ist eine Frage der Montage. Der erste Winkel nach dem
+    // Verbinden gilt deshalb als Null - der Griff wird losgelassen
+    // angeschlossen. Solange keiner kam, gibt es keinen Nullpunkt und damit
+    // auch keine Auslenkung zu zeigen.
+    if (angleZero === null) {
+      stageTravel.textContent = "–";
+      return;
+    }
+
     // Der Hebel steht in der Ruhelage oder irgendwo davor seinem Anschlag.
     // Ein Winkel jenseits der halben Umdrehung ist eine Auslenkung in die
-    // Gegenrichtung und damit die Ruhelage \u2013 nicht der Anschlag.
-    const signed = ((degrees % 360) + 540) % 360 - 180;
-    const swing = Math.min(Math.max(signed, 0), travelLimit);
+    // Gegenrichtung und damit die Ruhelage – nicht der Anschlag.
+    const swing = Math.min(Math.max(signedAngle(degrees - angleZero), 0),
+      travelLimit);
     stageTravel.textContent =
-      `${swing.toFixed(1)}\u00b0 / ${travelLimit.toFixed(1)}\u00b0`;
-    if (model) model.setAngle(degrees);
+      `${swing.toFixed(1)}° / ${travelLimit.toFixed(1)}°`;
+    if (model) model.setAngle(degrees - angleZero);
+  }
+
+  // Der kürzeste Weg zurück in den halben Kreis: 355 Grad sind fünf Grad in
+  // die Gegenrichtung, nicht dreihundertfünfundfünfzig in diese.
+  function signedAngle(degrees) {
+    return ((degrees % 360) + 540) % 360 - 180;
+  }
+
+  // Der nächste Winkel wird zur neuen Null. Ein Griff, der beim Verbinden
+  // gerade gezogen war, lässt sich so nachträglich richtigstellen, ohne die
+  // Verbindung zu lösen.
+  function resetZero() {
+    angleZero = null;
+    stageTravel.textContent = "–";
+    if (model) model.reset();
+    addLog("[OK]  Handle zero cleared, next reading sets it", "is-ok");
   }
 
   // Der Bogen läuft von der Null im Uhrzeigersinn bis zur aktuellen Stellung.
