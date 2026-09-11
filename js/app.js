@@ -38,7 +38,7 @@
   // Das Modell des Türgriffs. Wo es liegt und wie weit sein Hebel schwenkt,
   // steht im Modell selbst. Der Pfad des Moduls ist von dieser Datei aus
   // gerechnet, der des Modells vom Dokument: So verlangt es der Browser.
-  const MODEL_MODULE = "./model3d.js?v=21";
+  const MODEL_MODULE = "./model3d.js?v=22";
   const MODEL_URL = "./assets/models/xensiv_turns_counter.glb";
 
   // Solange das Modell nicht steht, gilt dieser Weg. Er ist derselbe, den das
@@ -155,7 +155,13 @@
   // In welche Richtung der gemessene Winkel läuft. Liegt der Magnet an der
   // Rückseite des Bretts, sieht der Sensor sein Feld spiegelbildlich und
   // zählt gegenläufig; der Griff schwenkt darum nicht anders.
-  let angleDirection = 1;
+  //
+  // Gelesen wird die Richtung aus dem Feld und nicht angenommen: Beim
+  // Neuladen stellt der Browser die zuletzt gewählte Seite dort von selbst
+  // wieder her. Stünde hier fest die Vorderseite, zeigte die Seite nach einem
+  // Neuladen "back" und rechnete "front" - der Ausschlag liefe verkehrt, und
+  // die Null im Schlaf wanderte in die falsche Richtung.
+  let angleDirection = orientationSelect.value === "back" ? -1 : 1;
 
   // Ob der Sensor beim letzten Bild schlief. Der Übergang ist der Augenblick,
   // in dem die Stromkarten geleert werden.
