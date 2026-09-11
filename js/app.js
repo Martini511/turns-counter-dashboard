@@ -38,7 +38,7 @@
   // Das Modell des Türgriffs. Wo es liegt und wie weit sein Hebel schwenkt,
   // steht im Modell selbst. Der Pfad des Moduls ist von dieser Datei aus
   // gerechnet, der des Modells vom Dokument: So verlangt es der Browser.
-  const MODEL_MODULE = "./model3d.js?v=20";
+  const MODEL_MODULE = "./model3d.js?v=21";
   const MODEL_URL = "./assets/models/xensiv_turns_counter.glb";
 
   // Solange das Modell nicht steht, gilt dieser Weg. Er ist derselbe, den das
@@ -631,8 +631,15 @@
   }
 
   function handleSwing(degrees) {
-    const swing = angleDirection * signedAngle(degrees - angleZero);
-    return Math.min(Math.max(swing, 0), travelLimit);
+    return Math.min(Math.max(rawSwing(degrees), 0), travelLimit);
+  }
+
+  // Dasselbe ungekappt. Die Anzeige braucht das nicht - unter null gibt es
+  // keine Auslenkung zu zeigen -, die Frage nach dem Nullpunkt beantwortet
+  // aber erst das Vorzeichen: Es sagt, auf welcher Seite der Null der Hebel
+  // steht.
+  function rawSwing(degrees) {
+    return angleDirection * signedAngle(degrees - angleZero);
   }
 
   // Die aufgezeichnete Auslenkung hängt am Nullpunkt. Verschiebt der sich, gilt
@@ -674,6 +681,29 @@
     setAck(`Handle zero at ${lastAngle}°`, "is-ok");
   }
 
+  // Schläft der Sensor, liegt der Griff in Ruhe: Wer ihn hielte, bewegte ihn,
+  // und der Sensor bliebe wach. Zeigt die Auslenkung in dieser Lage ins
+  // Minus, steht der Hebel hinter seiner eigenen Null - der Nullpunkt stammt
+  // dann aus einer Lage, die der Griff in Ruhe gar nicht einnimmt. Weil die
+  // Anzeige unter null kappt, bliebe das sonst unsichtbar: Sie zeigte null,
+  // und der ganze Weg bis zur wahren Ruhelage fehlte am Ausschlag. Der
+  // ruhende Winkel wird deshalb zur neuen Null.
+  //
+  // Das greift nur nach unten. Ein Nullpunkt, der zu weit hinten liegt, lässt
+  // sich im Schlaf nicht erkennen - eine Auslenkung nach vorn ist von einem
+  // falsch gesetzten Nullpunkt nicht zu unterscheiden, solange der Griff
+  // ruht. Die Probe darauf hiesse, jede gehaltene Stellung zur Ruhelage zu
+  // erklären.
+  function autoZero() {
+    if (angleZero === null || lastAngle === null) return;
+    if (rawSwing(lastAngle) >= 0) return;
+
+    angleZero = lastAngle;
+    rebuildTravel();
+    updateHandle(lastAngle);
+    setAck(`Handle zero moved to ${lastAngle}° while asleep`, "is-ok");
+  }
+
   // Der Bogen läuft von der Null im Uhrzeigersinn bis zur aktuellen Stellung.
   // Ein grosser Bogen ist nötig, sobald mehr als ein Halbkreis zurückliegt.
   function arcPath(degrees) {
@@ -711,6 +741,9 @@
       metricPeak.textContent = "--";
     }
     wasAsleep = asleep;
+
+    // Erst im Schlaf steht fest, dass der Griff wirklich losgelassen ist.
+    if (asleep) autoZero();
 
     // `hidden` als Eigenschaft kennt nur HTML; die Zeichnung ist SVG und
     // braucht das Attribut selbst.
