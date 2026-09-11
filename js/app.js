@@ -26,6 +26,7 @@
   const GAP_MS = 250;          // längere Lücken werden nicht überzeichnet
   const SLEEP_IDLE_MS = 400;   // ohne Winkel gilt der Sensor als schlafend
   const SAFETY_CAP = 200000;   // harte Obergrenze der gespeicherten Punkte
+  const STEM_DOT = 1.5;        // Kopf der Senkrechten im Schlaf, in Pixeln
 
   // Der allererste Winkel nach dem Verbinden taugt nicht als Ruhelage. Beim
   // Öffnen des Anschlusses kommt zuerst, was im Gerät noch im Puffer stand -
@@ -37,7 +38,7 @@
   // Das Modell des Türgriffs. Wo es liegt und wie weit sein Hebel schwenkt,
   // steht im Modell selbst. Der Pfad des Moduls ist von dieser Datei aus
   // gerechnet, der des Modells vom Dokument: So verlangt es der Browser.
-  const MODEL_MODULE = "./model3d.js?v=19";
+  const MODEL_MODULE = "./model3d.js?v=20";
   const MODEL_URL = "./assets/models/xensiv_turns_counter.glb";
 
   // Solange das Modell nicht steht, gilt dieser Weg. Er ist derselbe, den das
@@ -117,10 +118,13 @@
 
   const viewNow = () => (paused ? pausedAt : performance.now());
 
-  // Stromreihe (Mittel und Spitze) auf gemeinsamer Zeitachse.
+  // Stromreihe (Mittel und Spitze) auf gemeinsamer Zeitachse. Dazu je Punkt
+  // die Notiz, ob der Sensor beim Messen schlief: Gezeichnet wird ein solcher
+  // Punkt nicht als Teil eines Linienzugs, sondern für sich.
   const currentTimes = [];
   const currentAverages = [];
   const currentPeaks = [];
+  const currentAsleep = [];
 
   // Winkelreihe: was der Sensor misst, und was der Griff daraus macht.
   const angleTimes = [];
@@ -433,10 +437,12 @@
 
   function pushCurrent(average, peak) {
     const now = performance.now();
+    const asleep = isSleeping();
 
     currentTimes.push(now);
     currentAverages.push(average);
     currentPeaks.push(peak);
+    currentAsleep.push(asleep);
     rolling.push({ t: now, average, maximum: peak });
     rateStamps.push(now);
 
@@ -446,7 +452,7 @@
     // dann zwar weiter – seinen eigenen Ruhestrom –, aber die Frage, die diese
     // Karten beantworten, ist die nach dem Strom beim Wecken. Aufgezeichnet
     // wird alles: Im Verlauf steht auch der Ruhestrom, dort gehört er hin.
-    if (!isSleeping()) {
+    if (!asleep) {
       metricAverage.textContent = formatMicroAmps(average);
       metricPeak.textContent = formatMicroAmps(peak);
     }
@@ -503,13 +509,22 @@
     // Angehalten bleibt das eingefrorene Fenster erhalten; begrenzt wird nur
     // noch der Speicher.
     const start = paused ? -Infinity : now - windowMs;
-    trim(currentTimes, [currentAverages, currentPeaks], start);
+    trim(currentTimes, [currentAverages, currentPeaks, currentAsleep], start);
     trim(angleTimes, [angleValues, travelValues], start);
   }
 
   function trim(times, series, start) {
     let drop = 0;
     while (drop < times.length && times[drop] < start) drop += 1;
+
+    // Der letzte Punkt vor dem Fenster bleibt stehen. Er ist der Bezug für
+    // alles, was von links her ins Bild läuft - und im Schlaf der einzige,
+    // der noch sagt, wo der Griff steht. Ohne ihn liefe die Reihe leer,
+    // sobald die letzte Messung hinten aus dem Fenster fällt: Der gehaltene
+    // Wert verschwände mit ihr, und die Anzeige behauptete, es sei nichts
+    // mehr da - dabei steht der Griff unverändert, wo er stand.
+    if (drop > 0) drop -= 1;
+
     if (times.length - drop > SAFETY_CAP) drop = times.length - SAFETY_CAP;
     if (drop === 0) return;
 
@@ -710,7 +725,7 @@
     drawPlot(currentCanvas, currentContext, currentTimes, [
       { data: currentPeaks, color: PALETTE.peak, width: 1.4 },
       { data: currentAverages, color: PALETTE.average, width: 1.8 },
-    ], { fixed: false });
+    ], { fixed: false, stems: currentAsleep });
     drawPlot(angleCanvas, angleContext, angleTimes, [
       { data: angleValues, color: PALETTE.angle, width: 1.8 },
       { data: travelValues, color: PALETTE.travel, width: 1.8 },
@@ -832,6 +847,11 @@
     context.rect(padLeft, padTop, plotWidth, plotHeight);
     context.clip();
 
+    // Wo der Sensor schlief, steht hier je Punkt eine Notiz. Fehlt sie, ist
+    // die ganze Reihe gemessene Bewegung und wird durchgezogen.
+    const asleepAt = options.stems || null;
+    const baseline = yOf(0);
+
     for (const entry of series) {
       if (!entry.data.length) continue;
 
@@ -844,6 +864,12 @@
 
       let penDown = false;
       for (let index = 0; index < entry.data.length; index += 1) {
+        // Ein Punkt aus dem Schlaf gehört nicht in den Linienzug: Er bekommt
+        // seine eigene Senkrechte, und der Stift hebt vor und nach ihm ab.
+        if (asleepAt && asleepAt[index]) {
+          penDown = false;
+          continue;
+        }
         if (index > 0 && times[index] - times[index - 1] > GAP_MS) penDown = false;
         const x = xOf(times[index]);
         const y = yOf(entry.data[index]);
@@ -854,6 +880,8 @@
         }
       }
       context.stroke();
+
+      if (asleepAt) drawStems(context, entry, times, asleepAt, xOf, yOf, baseline);
 
       if (!options.holdColor) continue;
 
@@ -886,6 +914,40 @@
     context.restore();
   }
 
+  // Schläft der Sensor, misst er nur im Takt seines eigenen Aufwachens. Zwei
+  // benachbarte Punkte liegen dann weit auseinander, und eine Linie zwischen
+  // ihnen zöge die kurze Spitze zu einer breiten Flanke: Sie behauptete einen
+  // Anstieg und ein Abklingen, die so nie gemessen wurden. Gezeichnet wird
+  // deshalb jeder Punkt für sich - als Senkrechte auf die Null. Sie sagt, wie
+  // hoch der Strom war, ohne etwas über die Zeit davor und danach zu sagen.
+  function drawStems(context, entry, times, asleep, xOf, yOf, baseline) {
+    context.strokeStyle = entry.color;
+    context.lineWidth = entry.width || 1.6;
+    context.beginPath();
+
+    for (let index = 0; index < entry.data.length; index += 1) {
+      if (!asleep[index]) continue;
+      const x = xOf(times[index]);
+      context.moveTo(x, baseline);
+      context.lineTo(x, yOf(entry.data[index]));
+    }
+    context.stroke();
+
+    // Der Kopf der Senkrechten. Er trägt den Messwert und hält ihn auch dort
+    // sichtbar, wo die Spitze nur einen Punkt hoch ist.
+    context.fillStyle = entry.color;
+    context.beginPath();
+
+    for (let index = 0; index < entry.data.length; index += 1) {
+      if (!asleep[index]) continue;
+      const x = xOf(times[index]);
+      const y = yOf(entry.data[index]);
+      context.moveTo(x + STEM_DOT, y);
+      context.arc(x, y, STEM_DOT, 0, Math.PI * 2);
+    }
+    context.fill();
+  }
+
   // Rundet einen Rohschritt auf einen Wert der Form 1/2/5 × 10ⁿ, damit die
   // Achse gleichmässige Marken bekommt.
   function niceStep(value) {
@@ -909,6 +971,7 @@
     currentTimes.length = 0;
     currentAverages.length = 0;
     currentPeaks.length = 0;
+    currentAsleep.length = 0;
     angleTimes.length = 0;
     angleValues.length = 0;
     travelValues.length = 0;
