@@ -959,30 +959,74 @@
   // Anstieg und ein Abklingen, die so nie gemessen wurden. Gezeichnet wird
   // deshalb jeder Punkt für sich - als Senkrechte auf die Null. Sie sagt, wie
   // hoch der Strom war, ohne etwas über die Zeit davor und danach zu sagen.
+  //
+  // Je Pixelspalte steht nur eine Senkrechte, von der Null bis zum weitesten
+  // Ausschlag, und Köpfe nur auf dem höchsten und dem tiefsten Wert. Alles
+  // dazwischen läge ohnehin auf ihr, kostete aber je Bild einen eigenen
+  // Strich und Kreis - bei einem vollen Fenster aus dem Schlaf sind das
+  // Zehntausende, und die Anzeige geriete ins Stocken. Die Senkrechten sind
+  // Rechtecke statt Linien: Die zeichnet die Leinwand um ein Vielfaches
+  // schneller.
   function drawStems(context, entry, times, asleep, xOf, yOf, baseline) {
-    context.strokeStyle = entry.color;
-    context.lineWidth = entry.width || 1.6;
-    context.beginPath();
+    const data = entry.data;
+    const columns = [];   // flach: highX, highY, lowX, lowY, ...
 
-    for (let index = 0; index < entry.data.length; index += 1) {
+    let column = NaN;
+    let highX = 0;
+    let highY = 0;
+    let lowX = 0;
+    let lowY = 0;
+    const flush = () => {
+      if (!Number.isNaN(column)) columns.push(highX, highY, lowX, lowY);
+    };
+
+    for (let index = 0; index < data.length; index += 1) {
       if (!asleep[index]) continue;
       const x = xOf(times[index]);
-      context.moveTo(x, baseline);
-      context.lineTo(x, yOf(entry.data[index]));
+      const y = yOf(data[index]);
+      const here = Math.floor(x);
+      if (here !== column) {
+        flush();
+        column = here;
+        highX = lowX = x;
+        highY = lowY = y;
+        continue;
+      }
+      // Bildschirmkoordinaten: oben ist das kleinere y.
+      if (y < highY) {
+        highX = x;
+        highY = y;
+      }
+      if (y > lowY) {
+        lowX = x;
+        lowY = y;
+      }
     }
-    context.stroke();
+    flush();
+    if (!columns.length) return;
+
+    const stemWidth = entry.width || 1.6;
+    context.fillStyle = entry.color;
+    for (let index = 0; index < columns.length; index += 4) {
+      const top = Math.min(baseline, columns[index + 1]);
+      const bottom = Math.max(baseline, columns[index + 3]);
+      context.fillRect(columns[index] - stemWidth / 2, top, stemWidth, bottom - top);
+    }
 
     // Der Kopf der Senkrechten. Er trägt den Messwert und hält ihn auch dort
     // sichtbar, wo die Spitze nur einen Punkt hoch ist.
-    context.fillStyle = entry.color;
     context.beginPath();
-
-    for (let index = 0; index < entry.data.length; index += 1) {
-      if (!asleep[index]) continue;
-      const x = xOf(times[index]);
-      const y = yOf(entry.data[index]);
-      context.moveTo(x + STEM_DOT, y);
-      context.arc(x, y, STEM_DOT, 0, Math.PI * 2);
+    for (let index = 0; index < columns.length; index += 4) {
+      const highX = columns[index];
+      const highY = columns[index + 1];
+      const lowX = columns[index + 2];
+      const lowY = columns[index + 3];
+      context.moveTo(highX + STEM_DOT, highY);
+      context.arc(highX, highY, STEM_DOT, 0, Math.PI * 2);
+      if (lowX !== highX || lowY !== highY) {
+        context.moveTo(lowX + STEM_DOT, lowY);
+        context.arc(lowX, lowY, STEM_DOT, 0, Math.PI * 2);
+      }
     }
     context.fill();
   }
