@@ -111,6 +111,11 @@
     },
     wheel: {
       kind: "turns",
+      // Im Lenkrad sitzt das Zählermodul andersherum als im Türgriff: Der
+      // Magnet liegt, längs der Achse gesehen, auf der anderen Seite des
+      // Sensors. Dieselbe Drehung zählt der Sensor deshalb gegenläufig - ein
+      // Zuwachs im Winkel ist hier eine Drehung nach links.
+      sense: -1,
       rig: {
         url: "./assets/models/Steering_wheel_demo_v_1.glb",
         up: "z",
@@ -880,7 +885,7 @@
   // Die Drehung des Lenkrads seit der Null, in Grad und mit Vorzeichen:
   // rechtsherum positiv.
   function wheelRotation(unwrapped) {
-    return angleDirection * (unwrapped - turnZero);
+    return (demo.sense || 1) * angleDirection * (unwrapped - turnZero);
   }
 
   function formatTurns(turns) {
