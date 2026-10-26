@@ -14,7 +14,7 @@
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=Source+Sans+3:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
   <!-- Die Fassungsnummer zwingt Browser und Auslieferung dazu, die
        aktuelle Datei zu holen statt einer zwischengespeicherten. -->
-  <link rel="stylesheet" href="./style.css?v=22">
+  <link rel="stylesheet" href="./style.css?v=24">
 </head>
 <body>
 
@@ -26,6 +26,17 @@
         <small>Wake-up monitor</small>
       </span>
     </a>
+
+    <!-- Vorläufig: Welche Demo läuft, wählt dieser Schalter. Sobald die
+         Firmware ihren Aufbau selbst meldet ("demo handle" / "demo wheel"),
+         gilt deren Angabe und der Schalter ruht; danach kann er weg. -->
+    <div class="demo-switch" title="Temporary: chooses the demo until the board reports it itself">
+      <button type="button" class="demo-pick" data-demo-pick="handle">Door handle</button>
+      <button type="button" id="demo-switch" class="switch" role="switch"
+              aria-checked="false" aria-label="Steering wheel demo"><i></i></button>
+      <button type="button" class="demo-pick" data-demo-pick="wheel">Steering wheel</button>
+    </div>
+
     <div class="connection-tools">
       <div id="connection-label" class="connection-label" data-state="offline">
         <span class="status-dot"></span><span id="connection-text">Not connected</span>
@@ -53,7 +64,7 @@
                  Ohne WebGL oder bei einem Ladefehler bleibt die Zeichnung
                  darunter stehen – sie zeigt denselben Winkel. -->
             <canvas class="handle-canvas" id="handle-canvas" hidden
-                    aria-label="Model of the XENSIV turns counter door handle"></canvas>
+                    aria-label="Model of the XENSIV turns counter"></canvas>
 
             <svg class="dial-svg" viewBox="0 0 320 352" role="img"
                  aria-label="Schematic view of the XENSIV turns counter">
@@ -76,7 +87,7 @@
               </g>
 
               <text class="dial-value" id="dial-value" x="160" y="154">&ndash;</text>
-              <text class="dial-caption" x="160" y="182">DEGREES</text>
+              <text class="dial-caption" id="dial-caption" x="160" y="182">DEGREES</text>
               <text class="dial-brand" x="160" y="334">XENSIV&#8482;</text>
             </svg>
           </div>
@@ -87,11 +98,17 @@
           <span class="sleep-badge" id="sleep-badge" hidden>SENSOR SLEEPING</span>
 
           <div class="stage-readout">
+            <!-- Am Lenkrad sieht man nicht, wie oft es sich gedreht hat: Nach
+                 einer vollen Umdrehung steht es wie zuvor. Die Zahl steht
+                 deshalb gross auf der Bühne. -->
+            <div class="stage-turns" data-only="wheel" hidden>
+              <strong id="stage-turns-value">&ndash;</strong><span>TURNS</span>
+            </div>
             <div class="stage-line">
               <span>ANGLE</span><strong id="stage-angle">&ndash;</strong>
             </div>
             <div class="stage-line">
-              <span>HANDLE TRAVEL</span><strong id="stage-travel">&ndash;</strong>
+              <span id="stage-travel-label">HANDLE TRAVEL</span><strong id="stage-travel">&ndash;</strong>
             </div>
             <div class="stage-line">
               <span>PACKET RATE</span><strong id="stage-rate">&ndash;</strong>
@@ -101,7 +118,7 @@
 
         <section class="stage-main">
           <div class="section-heading">
-            <div><span class="eyebrow">LIVE TELEMETRY</span><h1>Handle and wake-up current</h1></div>
+            <div><span class="eyebrow">LIVE TELEMETRY</span><h1 id="page-title">Handle and wake-up current</h1></div>
             <span class="section-index">01</span>
           </div>
 
@@ -138,7 +155,7 @@
 
           <div class="metric-grid">
             <div class="metric-card">
-              <span>ANGLE</span><strong id="metric-angle">--</strong><small>degrees</small>
+              <span id="metric-angle-label">ANGLE</span><strong id="metric-angle">--</strong><small id="metric-angle-unit">degrees</small>
             </div>
             <!-- Diese beiden zeigen den Augenblickswert. Schläft der Sensor,
                  misst er nichts, und sie treten zurück. -->
@@ -194,14 +211,18 @@
 
             <div class="chart-card">
               <div class="chart-head">
-                <span class="chart-title">ANGLE &middot; DEGREES</span>
-                <span class="chart-legend">
+                <span class="chart-title" id="angle-chart-title">ANGLE &middot; DEGREES</span>
+                <span class="chart-legend" data-only="handle">
                   <i class="swatch swatch-angle"></i>sensor
                   <i class="swatch swatch-travel"></i>handle
                   <i class="swatch swatch-asleep"></i>asleep
                 </span>
+                <span class="chart-legend" data-only="wheel" hidden>
+                  <i class="swatch swatch-travel"></i>wheel
+                  <i class="swatch swatch-asleep"></i>asleep
+                </span>
               </div>
-              <canvas id="angle-chart" aria-label="Angle over time"></canvas>
+              <canvas id="angle-chart" aria-label="Angle or turns over time"></canvas>
             </div>
           </div>
 
@@ -226,7 +247,7 @@
   <!-- Die Fassung ist die laufende Nummer des Stands, aus dem diese Seite
        stammt. Sie ist zugleich die Nummer, die Stil und Skript aus dem
        Zwischenspeicher holt. -->
-  <small class="app-version">v22</small>
+  <small class="app-version">v24</small>
 
   <!-- three.js liegt im Projekt statt auf einem fremden Netz: Das Dashboard
        wird oft ohne Internetzugang am Gerät benutzt. Die Zuordnung gilt für
@@ -247,6 +268,6 @@
        Knopf, der die Verbindung aufbaut. So läuft die Seite auch als Datei,
        genau wie die Vorlage, aus der sie stammt. Das Modell holt sie sich
        danach selbst; gelingt das nicht, bleibt es bei der Zeichnung. -->
-  <script src="./js/app.js?v=23"></script>
+  <script src="./js/app.js?v=24"></script>
 </body>
 </html>

@@ -1,8 +1,8 @@
 /* XENSIV™ Turns Counter Dashboard
    Die Seite liest den seriellen Strom des Zählers und zeigt ihn an zwei
-   Stellen: als Griff auf der dunklen Bühne und als Zahlen und Verläufe
-   daneben. Geschrieben wird nur eine einzige Grösse – die Zeit, nach der
-   der Sensor schlafen geht. */
+   Stellen: als Türgriff oder Lenkrad auf der dunklen Bühne und als Zahlen
+   und Verläufe daneben. Geschrieben wird nur eine einzige Grösse – die Zeit,
+   nach der der Sensor schlafen geht. */
 
 
 (() => {
@@ -35,15 +35,129 @@
   // eine Meldung nach dieser Frist wird zum Nullpunkt.
   const ZERO_SETTLE_MS = 500;
 
-  // Das Modell des Türgriffs. Wo es liegt und wie weit sein Hebel schwenkt,
-  // steht im Modell selbst. Der Pfad des Moduls ist von dieser Datei aus
-  // gerechnet, der des Modells vom Dokument: So verlangt es der Browser.
-  const MODEL_MODULE = "./model3d.js?v=22";
-  const MODEL_URL = "./assets/models/xensiv_turns_counter.glb";
+  // Der Pfad des Moduls ist von dieser Datei aus gerechnet, die der Modelle
+  // vom Dokument: So verlangt es der Browser.
+  const MODEL_MODULE = "./model3d.js?v=24";
 
-  // Solange das Modell nicht steht, gilt dieser Weg. Er ist derselbe, den das
-  // Ausfuhrskript in die Datei schreibt.
-  const HANDLE_TRAVEL = 67.31;                             // Grad
+  // ─── Demos ────────────────────────────────────────────
+  // Dasselbe Zählermodul steckt in zwei Aufbauten. Beide funktionieren gleich,
+  // nur zählt der eine Grad und der andere Umdrehungen:
+  //
+  // "swing"  Der Türgriff schwenkt aus der Ruhelage bis an seinen Anschlag.
+  //          Gezeigt wird, wie weit er innerhalb dieses Weges steht.
+  // "turns"  Das Lenkrad dreht frei, beliebig oft in beide Richtungen.
+  //          Gezeigt werden die Umdrehungen seit der Null.
+  //
+  // Der Steckbrief `rig` sagt dem Modell, was sich bewegt: die Bauteile mit
+  // diesen Namensanfängen. Die Achse liest es aus der Geometrie der Welle,
+  // die Drehrichtung aus `positive` (siehe model3d.js). `mount` ist die
+  // Halterung, in der beide Demos stecken; in ihren Koordinaten gelten auch
+  // die Blickrichtungen `home` und die Richtungen der Logos. `finish` färbt
+  // Bauteile um, `logos` die eingravierten Logos. Die Namen stammen aus der
+  // Konstruktion; wer dort umbenennt, muss es hier nachtragen.
+  // Die Farben aus dem CAD sind Grau in Grau, und die dunkle Bühne schluckt
+  // den Rest. Deshalb hier eine eigene Ordnung, die in beiden Demos gilt:
+  // Was sich bewegt, ist das Hellste auf der Bühne; der Sockel darunter
+  // dunkel, damit sich beides trennt; die Halterung hell und kühl, damit sie
+  // auch leer für sich steht. Das eingravierte Logo trägt das Blau aus dem
+  // Infineon-Zeichen - Blau auf Weiss, wie im Original.
+  const FINISH = {
+    moving: { color: "#f4f6f7", roughness: 0.38, metalness: 0 },
+    socket: { color: "#3d474c", roughness: 0.55, metalness: 0 },
+    holder: { color: "#c7d1d5", roughness: 0.6, metalness: 0 },
+  };
+  const LOGO_BLUE = "#165ca8";
+
+  const DEMOS = {
+    handle: {
+      kind: "swing",
+      rig: {
+        url: "./assets/models/Cardoor_handle_demo_v_3.glb",
+        up: "z",
+        mount: "Add_on_holder_plate",
+        axis: "Axis",
+        moving: ["Handle_v", "Magnet_0603"],
+        positive: "lift",
+        travel: 67.31,                                     // Grad, aus der Konstruktion
+        home: { azimuth: -0.72, polar: 1.04 },
+        finish: {
+          Handle_v: FINISH.moving,
+          Base_with_PCB: FINISH.socket,
+          Add_on_holder_plate: FINISH.holder,
+        },
+        logos: [
+          { part: "Handle_v", facing: [0, 0, 1], color: LOGO_BLUE },
+          // Die Stirnseite des Sockels trägt ein zweites, kleineres Logo.
+          // Blau auf Anthrazit ginge unter; dort steht es hell.
+          { part: "Base_with_PCB", facing: [0, -1, 0], color: FINISH.moving.color },
+        ],
+      },
+      text: {
+        name: "Door handle",
+        title: "Handle and wake-up current",
+        travel: "HANDLE TRAVEL",
+        metric: "ANGLE",
+        metricUnit: "degrees",
+        chart: "ANGLE \u00b7 DEGREES",
+        reset: "Reset Handle Angle",
+        resetTitle: "Take the current reading as the handle's rest position",
+        model: "Model of the XENSIV turns counter door handle",
+        hint: "Connect the counter over USB; the page reads its serial stream at "
+          + "115200 baud. Shortly after connecting the angle then read counts as "
+          + "the handle's rest position \u2013 connect with the handle released, or "
+          + "press \u201cReset Handle Angle\u201d to take the reading of that moment "
+          + "as the new zero.",
+      },
+    },
+    wheel: {
+      kind: "turns",
+      rig: {
+        url: "./assets/models/Steering_wheel_demo_v_1.glb",
+        up: "z",
+        mount: "Add_on_holder_plate",
+        axis: "Axis_v",
+        moving: ["Steering_wheel_", "Axis_v", "Magnet_holder", "Magnet_0603"],
+        positive: "clockwise",
+        travel: Infinity,
+        // Schräg von der Seite: Das Rad bleibt als Rad lesbar, und hinter ihm
+        // sind Lenksäule, Magnet und Platine zu sehen - um die geht es ja.
+        home: { azimuth: -2.87, polar: 0.9 },
+        finish: {
+          Steering_wheel_: FINISH.moving,
+          Steering_base: FINISH.socket,
+          Add_on_holder_plate: FINISH.holder,
+        },
+        // Das Logo sitzt auf der Nabe und schaut zum Fahrer.
+        logos: [{ part: "Steering_wheel_front", facing: "out", color: LOGO_BLUE }],
+      },
+      text: {
+        name: "Steering wheel",
+        title: "Steering wheel and wake-up current",
+        travel: "ROTATION",
+        metric: "TURNS",
+        metricUnit: "revolutions",
+        chart: "TURNS \u00b7 REVOLUTIONS",
+        reset: "Reset Turns",
+        resetTitle: "Take the current wheel position as zero turns",
+        model: "Model of the XENSIV turns counter steering wheel",
+        hint: "Connect the counter over USB; the page reads its serial stream at "
+          + "115200 baud. Shortly after connecting the wheel's position then read "
+          + "counts as zero turns. Turning right counts up, turning left counts "
+          + "down, without an end stop. Press \u201cReset Turns\u201d to count from "
+          + "the current position.",
+      },
+    },
+  };
+
+  // Bis die Firmware selbst sagt, in welchem Aufbau sie steckt, wählt ein
+  // Schalter in der Kopfzeile die Demo. Die Wahl übersteht ein Neuladen.
+  // Meldet sich das Gerät mit einer Zeile "demo <name>", gilt dessen Angabe;
+  // diese Namen versteht die Seite dabei.
+  const DEMO_STORAGE_KEY = "turns-counter-demo";
+  const DEMO_NAMES = {
+    handle: "handle", door: "handle", doorhandle: "handle",
+    wheel: "wheel", steering: "wheel", steeringwheel: "wheel",
+  };
 
   // Farben der Bühne, damit die Leinwände dieselbe Sprache sprechen wie das
   // Stilblatt.
@@ -81,15 +195,27 @@
 
   const stageAngle = byId("stage-angle");
   const stageTravel = byId("stage-travel");
+  const stageTravelLabel = byId("stage-travel-label");
+  const stageTurns = byId("stage-turns-value");
   const stageRate = byId("stage-rate");
   const dialValue = byId("dial-value");
+  const dialCaption = byId("dial-caption");
   const dialArc = byId("dial-arc");
   const dialNeedle = byId("dial-needle-group");
   const sleepBadge = byId("sleep-badge");
   const handleStage = byId("handle-stage");
   const handleCanvas = byId("handle-canvas");
 
+  const demoSwitch = byId("demo-switch");
+  const demoPicks = document.querySelectorAll("[data-demo-pick]");
+  const demoOnly = document.querySelectorAll("[data-only]");
+  const pageTitle = byId("page-title");
+  const hint = byId("hint");
+
   const metricAngle = byId("metric-angle");
+  const metricAngleLabel = byId("metric-angle-label");
+  const metricAngleUnit = byId("metric-angle-unit");
+  const angleChartTitle = byId("angle-chart-title");
   const metricAverage = byId("metric-avg");
   const metricPeak = byId("metric-peak");
   const metricRollAverage = byId("metric-roll-avg");
@@ -126,9 +252,12 @@
   const currentPeaks = [];
   const currentAsleep = [];
 
-  // Winkelreihe: was der Sensor misst, und was der Griff daraus macht.
+  // Winkelreihe: was der Sensor misst, derselbe Winkel ohne Sprung an der
+  // vollen Umdrehung, und was die Demo daraus macht - beim Griff die
+  // Auslenkung in Grad, beim Lenkrad die Umdrehungen.
   const angleTimes = [];
   const angleValues = [];
+  const unwrappedValues = [];
   const travelValues = [];
 
   // Gleitendes Fenster {t, average, maximum} und die Zeitpunkte der letzten
@@ -139,17 +268,34 @@
   // Zeilen der CSV-Datei gibt es nicht mehr; was gemessen wird, steht in den
   // Reihen oben.
 
-  // Umdrehungen zählt dieses Gerät nicht: Sein Hebel schwenkt aus der Ruhelage
-  // bis an einen Anschlag und wieder zurück. Gezeigt wird deshalb, wie weit er
-  // innerhalb dieses Weges steht – und das Modell schwenkt genauso weit mit.
+  // Welche Demo gerade läuft, und ob das Gerät selbst sie bestimmt hat. Dann
+  // schweigt der Schalter, bis die Verbindung endet.
+  let demoId = readStoredDemo();
+  let demo = DEMOS[demoId];
+  let demoFromDevice = false;
+
+  // Der Griff schwenkt aus der Ruhelage bis an einen Anschlag und wieder
+  // zurück; gezeigt wird, wie weit er innerhalb dieses Weges steht. Das
+  // Lenkrad hat keinen Anschlag, sein Weg ist unendlich.
   let model = null;
   let lastAngle = null;
-  let travelLimit = HANDLE_TRAVEL;
+  let travelLimit = demo.rig.travel;
+
+  // Der Sensor meldet den Winkel im vollen Kreis; nach 359 kommt 0. Die
+  // Umdrehungen ergeben sich erst, wenn jeder Schritt als der kürzere Weg
+  // vom vorigen Winkel gelesen wird. Dieser Wert läuft deshalb ohne Sprung
+  // weiter, über beliebig viele Umdrehungen und auch über ein Leeren der
+  // Verläufe oder eine neue Verbindung hinweg. Verloren geht eine Umdrehung
+  // nur, wenn sich das Rad zwischen zwei Meldungen um mehr als eine halbe
+  // gedreht hat.
+  let lastUnwrapped = null;
 
   // Der Winkel, der als Ruhelage des Griffs gilt, und der Augenblick, seit dem
   // der Anschluss offen ist. Null ist ein gültiger Winkel, "noch keiner" ist
-  // etwas anderes - deshalb null und nicht 0.
+  // etwas anderes - deshalb null und nicht 0. Die Null des Lenkrads ist
+  // derselbe Augenblick, gemessen am durchlaufenden Winkel.
   let angleZero = null;
+  let turnZero = null;
   let openedAt = 0;
 
   // In welche Richtung der gemessene Winkel läuft. Liegt der Magnet an der
@@ -177,10 +323,16 @@
   // ─── Start ────────────────────────────────────────────
 
   buildDialTicks();
-  updateHandle(null);
+  applyDemo();
   drawCharts();
   loadModel();
 
+  demoSwitch.addEventListener("click", () => {
+    chooseDemo(demoId === "wheel" ? "handle" : "wheel");
+  });
+  for (const pick of demoPicks) {
+    pick.addEventListener("click", () => chooseDemo(pick.dataset.demoPick));
+  }
   connectButton.addEventListener("click", connect);
   disconnectButton.addEventListener("click", () => disconnect("Connection released"));
   setSleepButton.addEventListener("click", sendSleepTimeout);
@@ -249,6 +401,7 @@
 
     // Jede Verbindung beginnt ohne Nullpunkt: Der erste Winkel setzt ihn.
     angleZero = null;
+    turnZero = null;
     openedAt = performance.now();
 
     connectButton.hidden = true;
@@ -263,6 +416,7 @@
 
     readLoop();
     querySleepTimeout();
+    showModel();
   }
 
   async function disconnect(reason) {
@@ -282,7 +436,16 @@
     sawSync0 = false;
     asciiBuffer = "";
     sensorSleeping = false;
-    angleZero = null;
+
+    // Der Nullpunkt bleibt stehen, bis die nächste Verbindung ihn neu setzt:
+    // An ihm hängt der aufgezeichnete Verlauf, und der soll auch nach dem
+    // Trennen noch in die andere Demo umgerechnet werden können.
+
+    // Was das Gerät über seinen Aufbau gesagt hat, galt für diese Verbindung.
+    // Die Demo bleibt stehen, nur der Schalter gibt wieder frei.
+    demoFromDevice = false;
+    updateDemoSwitch();
+    showModel();
 
     connectButton.hidden = false;
     disconnectButton.hidden = true;
@@ -429,6 +592,21 @@
       return;
     }
 
+    // Der künftige Handschlag: Das Gerät sagt, in welchem Aufbau es steckt,
+    // etwa "demo wheel" oder "OK demo handle".
+    const demoMatch = /^(?:OK\s+)?demo\s+(\S+)/i.exec(line);
+    if (demoMatch) {
+      const announced = DEMO_NAMES[demoMatch[1].toLowerCase().replace(/[^a-z]/g, "")];
+      if (!announced) {
+        setAck(`Unknown demo "${demoMatch[1]}"`, "is-error");
+        return;
+      }
+      demoFromDevice = true;
+      setDemo(announced);
+      setAck(`Board reports: ${DEMOS[announced].text.name}`, "is-ok");
+      return;
+    }
+
     if (/sensor\s+SLEEP/i.test(line)) sensorSleeping = true;
   }
 
@@ -469,25 +647,29 @@
     const now = performance.now();
     sensorSleeping = false;
 
+    lastUnwrapped = lastUnwrapped === null
+      ? degrees
+      : lastUnwrapped + signedAngle(degrees - lastUnwrapped);
+
     angleTimes.push(now);
     angleValues.push(degrees);
+    unwrappedValues.push(lastUnwrapped);
 
     // Die erste Meldung nach der Einschwingfrist legt den Nullpunkt fest. Die
     // Winkel davor bekommen ihren Bezug nachträglich.
     if (angleZero === null && now - openedAt >= ZERO_SETTLE_MS) {
       angleZero = degrees;
+      turnZero = lastUnwrapped;
       rebuildTravel();
-      setAck(`Handle zero at ${degrees}°`, "is-ok");
+      setAck(zeroMessage(degrees), "is-ok");
     }
 
     // Ohne Nullpunkt gibt es noch keine Auslenkung. Die Reihe braucht
     // trotzdem einen Eintrag, sonst gerät sie gegen die Zeitachse aus dem
     // Tritt; sobald der Nullpunkt steht, holt `rebuildTravel` ihn nach.
-    travelValues.push(angleZero === null ? 0 : handleSwing(degrees));
+    travelValues.push(travelAt(degrees, lastUnwrapped));
 
     prune(now);
-
-    metricAngle.textContent = `${degrees}°`;
     updateHandle(degrees);
   }
 
@@ -516,7 +698,7 @@
     // noch der Speicher.
     const start = paused ? -Infinity : now - windowMs;
     trim(currentTimes, [currentAverages, currentPeaks, currentAsleep], start);
-    trim(angleTimes, [angleValues, travelValues], start);
+    trim(angleTimes, [angleValues, unwrappedValues, travelValues], start);
   }
 
   function trim(times, series, start) {
@@ -583,16 +765,39 @@
   // Modell und läuft auch dort, wo es nicht geladen werden kann.
   async function loadModel() {
     try {
-      const { HandleModel } = await import(MODEL_MODULE);
-      model = await new HandleModel(handleCanvas).load(MODEL_URL);
+      const { DemoModel } = await import(MODEL_MODULE);
+      model = new DemoModel(handleCanvas);
+      await model.showBase(demo.rig);
     } catch (error) {
+      model = null;
       console.warn("3D model unavailable, the drawing stays.", error);
       return;
     }
     handleCanvas.hidden = false;
     handleStage.classList.add("has-model");
-    travelLimit = model.limit;
-    rebuildTravel();
+
+    // Beide Demos liegen bereit, bevor ein Gerät kommt: So fährt die richtige
+    // ohne Wartezeit ein, sobald die Verbindung steht.
+    for (const each of Object.values(DEMOS)) model.preload(each.rig);
+    showModel();
+  }
+
+  // Ohne Gerät steht nur die leere Halterung auf der Bühne - welcher Aufbau
+  // kommt, weiss die Seite erst mit der Verbindung. Dann fährt die Demo
+  // hinein, beim Trennen oder Wechseln wieder hinaus.
+  async function showModel() {
+    if (!model) return;
+    if (!port) {
+      model.unmount();
+      return;
+    }
+
+    try {
+      if (!(await model.mount(demo.rig))) return;   // inzwischen etwas anderes verlangt
+    } catch (error) {
+      console.warn(`3D model of the ${demo.text.name} unavailable.`, error);
+      return;
+    }
     updateHandle(lastAngle);
   }
 
@@ -608,14 +813,22 @@
       dialArc.setAttribute("d", "");
       stageAngle.textContent = "\u2013";
       stageTravel.textContent = "\u2013";
+      stageTurns.textContent = "\u2013";
+      metricAngle.textContent = "--";
       if (model) model.reset();
+      return;
+    }
+
+    stageAngle.textContent = `${degrees}\u00b0`;
+    if (demo.kind === "turns") {
+      updateWheel();
       return;
     }
 
     dialValue.textContent = `${degrees}\u00b0`;
     dialNeedle.style.transform = `rotate(${degrees}deg)`;
     dialArc.setAttribute("d", arcPath(degrees));
-    stageAngle.textContent = `${degrees}\u00b0`;
+    metricAngle.textContent = `${degrees}\u00b0`;
 
     // Der Sensor misst absolut, der Griff nicht: Wo sein Magnet in der
     // Ruhelage steht, ist eine Frage der Montage. Der erste Winkel nach dem
@@ -636,6 +849,60 @@
     if (model) model.setAngle(angleDirection * (degrees - angleZero));
   }
 
+  // Beim Lenkrad zählt nicht, wo im Kreis es steht, sondern wie oft es sich
+  // seit der Null gedreht hat. Die Zeichnung zeigt dazu die Stellung
+  // innerhalb der laufenden Umdrehung; die Zahl in ihrer Mitte sind die
+  // Umdrehungen.
+  function updateWheel() {
+    if (angleZero === null) {
+      dialValue.textContent = "\u2013";
+      dialNeedle.style.transform = "rotate(0deg)";
+      dialArc.setAttribute("d", "");
+      stageTravel.textContent = "\u2013";
+      stageTurns.textContent = "\u2013";
+      metricAngle.textContent = "--";
+      return;
+    }
+
+    const rotation = wheelRotation(lastUnwrapped);
+    const turns = formatTurns(rotation / 360);
+    const within = ((rotation % 360) + 360) % 360;
+
+    dialValue.textContent = turns;
+    dialNeedle.style.transform = `rotate(${within}deg)`;
+    dialArc.setAttribute("d", arcPath(within));
+    stageTravel.textContent = `${formatSigned(Math.round(rotation))}\u00b0`;
+    stageTurns.textContent = turns;
+    metricAngle.textContent = turns;
+    if (model) model.setAngle(rotation);
+  }
+
+  // Die Drehung des Lenkrads seit der Null, in Grad und mit Vorzeichen:
+  // rechtsherum positiv.
+  function wheelRotation(unwrapped) {
+    return angleDirection * (unwrapped - turnZero);
+  }
+
+  function formatTurns(turns) {
+    return formatSigned(Math.abs(turns) < 0.005 ? 0 : turns, 2);
+  }
+
+  function formatSigned(value, decimals = 0) {
+    const text = Math.abs(value).toFixed(decimals);
+    if (value > 0) return `+${text}`;
+    if (value < 0) return `\u2212${text}`;
+    return text;
+  }
+
+  // Was die Demo aus einer Meldung macht: beim Griff die Auslenkung in Grad,
+  // beim Lenkrad die Umdrehungen. Vor dem Nullpunkt gibt es weder das eine
+  // noch das andere.
+  function travelAt(degrees, unwrapped) {
+    if (angleZero === null) return 0;
+    if (demo.kind === "turns") return wheelRotation(unwrapped) / 360;
+    return handleSwing(degrees);
+  }
+
   function handleSwing(degrees) {
     return Math.min(Math.max(rawSwing(degrees), 0), travelLimit);
   }
@@ -650,14 +917,13 @@
 
   // Die aufgezeichnete Auslenkung hängt am Nullpunkt. Verschiebt der sich, gilt
   // der neue rückwirkend: Der Verlauf zeigt den Griff, wie er zur jetzigen
-  // Null steht, und nicht zu einer, die niemand mehr sieht.
+  // Null steht, und nicht zu einer, die niemand mehr sieht. Dasselbe gilt
+  // beim Wechsel der Demo: Aus denselben Meldungen werden dann Umdrehungen
+  // statt Grad, oder umgekehrt.
   function rebuildTravel() {
-    if (angleZero === null) {
-      travelValues.length = 0;
-      return;
-    }
+    travelValues.length = angleValues.length;
     for (let index = 0; index < angleValues.length; index += 1) {
-      travelValues[index] = handleSwing(angleValues[index]);
+      travelValues[index] = travelAt(angleValues[index], unwrappedValues[index]);
     }
   }
 
@@ -675,16 +941,23 @@
   function resetZero() {
     if (lastAngle === null) {
       angleZero = null;
-      stageTravel.textContent = "–";
-      if (model) model.reset();
-      setAck("Handle zero cleared, next reading sets it", "is-ok");
+      turnZero = null;
+      updateHandle(null);
+      setAck(`${demo.text.name} zero cleared, next reading sets it`, "is-ok");
       return;
     }
 
     angleZero = lastAngle;
+    turnZero = lastUnwrapped;
     rebuildTravel();
     updateHandle(lastAngle);
-    setAck(`Handle zero at ${lastAngle}°`, "is-ok");
+    setAck(zeroMessage(lastAngle), "is-ok");
+  }
+
+  function zeroMessage(degrees) {
+    return demo.kind === "turns"
+      ? `Turns counted from ${degrees}°`
+      : `Handle zero at ${degrees}°`;
   }
 
   // Schläft der Sensor, liegt der Griff in Ruhe: Wer ihn hielte, bewegte ihn,
@@ -700,11 +973,16 @@
   // falsch gesetzten Nullpunkt nicht zu unterscheiden, solange der Griff
   // ruht. Die Probe darauf hiesse, jede gehaltene Stellung zur Ruhelage zu
   // erklären.
+  //
+  // Für das Lenkrad gilt das alles nicht: Es hat keinen Anschlag, und jede
+  // Stellung, auch links der Null, ist eine, in der es ruhen kann.
   function autoZero() {
+    if (demo.kind !== "swing") return;
     if (angleZero === null || lastAngle === null) return;
     if (rawSwing(lastAngle) >= 0) return;
 
     angleZero = lastAngle;
+    turnZero = lastUnwrapped;
     rebuildTravel();
     updateHandle(lastAngle);
     setAck(`Handle zero moved to ${lastAngle}° while asleep`, "is-ok");
@@ -765,21 +1043,27 @@
       { data: currentPeaks, color: PALETTE.peak, width: 1.4 },
       { data: currentAverages, color: PALETTE.average, width: 1.8 },
     ], { fixed: false, stems: currentAsleep });
+
+    // Schläft der Sensor, bricht die Linie nicht ab: Der Griff steht ja
+    // weiter, wo er stand. Sie läuft waagerecht weiter und wechselt dabei
+    // die Farbe – gemessen ist dieser Abschnitt nicht. Bis an den rechten
+    // Rand reicht er nur, solange eine Verbindung besteht; ohne sie ist
+    // nichts zu halten, sondern schlicht Schluss.
+    const hold = { holdColor: PALETTE.asleep, holdUntil: port ? viewNow() : null };
+
+    // Das Lenkrad kennt keinen Rahmen wie den vollen Kreis: Die Achse folgt
+    // den Umdrehungen, wie viele es auch werden, mindestens aber eine.
+    if (demo.kind === "turns") {
+      drawPlot(angleCanvas, angleContext, angleTimes, [
+        { data: travelValues, color: PALETTE.travel, width: 1.8 },
+      ], { fixed: false, nice: true, span: 1, ...hold });
+      return;
+    }
+
     drawPlot(angleCanvas, angleContext, angleTimes, [
       { data: angleValues, color: PALETTE.angle, width: 1.8 },
       { data: travelValues, color: PALETTE.travel, width: 1.8 },
-    ], {
-      fixed: true,
-      minimum: 0,
-      maximum: 360,
-      // Schläft der Sensor, bricht die Linie nicht ab: Der Griff steht ja
-      // weiter, wo er stand. Sie läuft waagerecht weiter und wechselt dabei
-      // die Farbe – gemessen ist dieser Abschnitt nicht. Bis an den rechten
-      // Rand reicht er nur, solange eine Verbindung besteht; ohne sie ist
-      // nichts zu halten, sondern schlicht Schluss.
-      holdColor: PALETTE.asleep,
-      holdUntil: port ? viewNow() : null,
-    });
+    ], { fixed: true, minimum: 0, maximum: 360, ...hold });
   }
 
   // Zeichnet eine oder mehrere Reihen, die sich Zeitachse und Wertebereich
@@ -813,9 +1097,34 @@
 
     let minimum;
     let maximum;
+    let gridStep = 0;   // 0: fünf gleiche Teile des Bereichs
     if (options.fixed) {
       minimum = options.minimum;
       maximum = options.maximum;
+    } else if (options.nice) {
+      // Grenzen und Raster auf runden Schritten, damit die Beschriftung
+      // auch bei Bruchteilen lesbar bleibt - 0.5 statt 0.4667.
+      let low = Infinity;
+      let high = -Infinity;
+      for (const entry of series) {
+        for (const value of entry.data) {
+          if (value < low) low = value;
+          if (value > high) high = value;
+        }
+      }
+      if (low > high) {
+        low = 0;
+        high = 0;
+      }
+      const span = options.span || 1;
+      if (high - low < span) {
+        const middle = (high + low) / 2;
+        low = middle - span / 2;
+        high = middle + span / 2;
+      }
+      gridStep = niceStep((high - low) / 5);
+      minimum = Math.floor(low / gridStep) * gridStep;
+      maximum = Math.ceil(high / gridStep) * gridStep;
     } else {
       let dataMaximum = 0;
       let dataMinimum = 0;
@@ -839,8 +1148,12 @@
     // Waagerechtes Raster mit Beschriftung.
     context.textAlign = "right";
     context.textBaseline = "middle";
-    for (let index = 0; index <= 5; index += 1) {
-      const value = minimum + (range * index) / 5;
+    const lines = gridStep ? Math.round(range / gridStep) : 5;
+    const valueDecimals = gridStep >= 1 || !gridStep
+      ? 0
+      : Math.min(3, Math.ceil(-Math.log10(gridStep) - 1e-9));
+    for (let index = 0; index <= lines; index += 1) {
+      const value = minimum + (range * index) / lines;
       const y = Math.round(yOf(value)) + 0.5;
       context.strokeStyle = PALETTE.grid;
       context.beginPath();
@@ -848,7 +1161,10 @@
       context.lineTo(width - padRight, y);
       context.stroke();
       context.fillStyle = PALETTE.text;
-      context.fillText(Math.round(value).toString(), padLeft - 8, y);
+      const label = valueDecimals
+        ? (Math.abs(value) < gridStep / 2 ? 0 : value).toFixed(valueDecimals)
+        : Math.round(value).toString();
+      context.fillText(label, padLeft - 8, y);
     }
 
     // Senkrechtes Raster mit relativer Zeit; rechts steht die Null. Der
@@ -1041,6 +1357,71 @@
     return step * power;
   }
 
+  // ─── Demo ─────────────────────────────────────────────
+
+  function readStoredDemo() {
+    try {
+      const stored = localStorage.getItem(DEMO_STORAGE_KEY);
+      if (stored && DEMOS[stored]) return stored;
+    } catch { /* ohne Speicher gilt eben der Türgriff */ }
+    return "handle";
+  }
+
+  // Die Wahl am Schalter. Hat das Gerät seinen Aufbau genannt, gilt der.
+  function chooseDemo(id) {
+    if (demoFromDevice || !DEMOS[id]) return;
+    try { localStorage.setItem(DEMO_STORAGE_KEY, id); } catch { /* nur nicht gemerkt */ }
+    setDemo(id);
+  }
+
+  function setDemo(id) {
+    if (id === demoId) {
+      updateDemoSwitch();
+      return;
+    }
+    demoId = id;
+    demo = DEMOS[id];
+    applyDemo();
+    showModel();
+  }
+
+  // Bringt Beschriftungen, Verlauf und Anzeige auf die laufende Demo. Die
+  // Messungen bleiben dieselben; nur was aus ihnen gemacht wird, ändert sich.
+  function applyDemo() {
+    const { text } = demo;
+    travelLimit = demo.rig.travel;
+
+    document.body.dataset.demo = demoId;
+    for (const element of demoOnly) element.hidden = element.dataset.only !== demoId;
+
+    pageTitle.textContent = text.title;
+    stageTravelLabel.textContent = text.travel;
+    metricAngleLabel.textContent = text.metric;
+    metricAngleUnit.textContent = text.metricUnit;
+    angleChartTitle.textContent = text.chart;
+    resetZeroButton.textContent = text.reset;
+    resetZeroButton.title = text.resetTitle;
+    handleCanvas.setAttribute("aria-label", text.model);
+    dialCaption.textContent = demo.kind === "turns" ? "TURNS" : "DEGREES";
+    hint.textContent = text.hint;
+
+    updateDemoSwitch();
+    rebuildTravel();
+    updateHandle(lastAngle);
+  }
+
+  function updateDemoSwitch() {
+    demoSwitch.setAttribute("aria-checked", String(demoId === "wheel"));
+    demoSwitch.disabled = demoFromDevice;
+    for (const pick of demoPicks) {
+      pick.classList.toggle("is-active", pick.dataset.demoPick === demoId);
+      pick.disabled = demoFromDevice;
+    }
+    demoSwitch.closest(".demo-switch").title = demoFromDevice
+      ? "Set by the board"
+      : "Temporary: chooses the demo until the board reports it itself";
+  }
+
   // ─── Werkzeuge ────────────────────────────────────────
 
   function togglePause() {
@@ -1057,6 +1438,7 @@
     currentAsleep.length = 0;
     angleTimes.length = 0;
     angleValues.length = 0;
+    unwrappedValues.length = 0;
     travelValues.length = 0;
     rolling.length = 0;
     rateStamps.length = 0;

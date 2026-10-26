@@ -65,6 +65,59 @@ button:disabled, input:disabled, select:disabled { cursor: not-allowed; opacity:
 
 .connection-tools { display: flex; align-items: center; gap: 18px; }
 
+/* Vorläufiger Schalter zwischen den Demos. Er sitzt mitten in der Kopfzeile,
+   weil er die ganze Seite umstellt - nicht nur einen Teil von ihr. Die
+   Namen links und rechts sind selbst anklickbar; der Schieber dazwischen
+   zeigt, welcher gilt. */
+.demo-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+  margin-right: clamp(0px, 2vw, 28px);
+}
+.demo-pick {
+  border: 0;
+  padding: 4px 2px;
+  background: none;
+  color: var(--muted);
+  font: 600 12px "IBM Plex Mono", monospace;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+}
+.demo-pick.is-active { color: var(--ink); }
+.demo-pick:hover:not(:disabled):not(.is-active) { color: var(--accent-dark); }
+
+.switch {
+  position: relative;
+  width: 42px;
+  height: 22px;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 11px;
+  padding: 0;
+  background: var(--accent);
+  transition: background .2s ease;
+}
+.switch i {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px #12262b40;
+  transition: transform .2s ease;
+}
+.switch[aria-checked="true"] i { transform: translateX(20px); }
+.switch:hover:not(:disabled) { background: var(--accent-dark); }
+.switch:focus-visible, .demo-pick:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+/* Hat das Gerät die Demo genannt, ruht der Schalter. Er bleibt aber lesbar:
+   Er zeigt ja weiterhin, welche gilt. */
+.demo-switch :disabled { opacity: .6; }
+.demo-pick.is-active:disabled { opacity: 1; }
+
 /* Die Fassungsnummer steht in der Ecke und drängt sich nicht auf. Sie ist
    nicht anzuklicken und nicht auszuwählen – gebraucht wird sie nur, wenn
    jemand nach ihr fragt. */
@@ -292,6 +345,13 @@ h1, h2 { margin: 4px 0 0; font-size: clamp(22px, 2vw, 32px); line-height: 1.05; 
 .stage-line span { color: #9fb3b5; font: 500 10px "IBM Plex Mono", monospace; }
 .stage-line strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 15px "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; }
 
+/* Die Umdrehungen des Lenkrads, gross genug, um sie aus dem Stand am Tisch
+   zu lesen - wie das Schlafzeichen oben. */
+.stage-turns { display: flex; align-items: baseline; gap: 12px; padding-bottom: 6px; }
+.stage-turns[hidden] { display: none; }
+.stage-turns strong { font: 600 clamp(38px, 4.2vw, 60px) "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; line-height: 1; color: #eaf6f4; }
+.stage-turns span { color: #9fb3b5; font: 500 11px "IBM Plex Mono", monospace; letter-spacing: .18em; }
+
 /* Die Spalte füllt das Fenster, und was an Höhe übrig bleibt, bekommen die
    Verläufe. So steht auf einem hohen Schirm ein hoher Verlauf und auf einem
    flachen ein flacher – statt dass auf dem einen Platz verschenkt und auf dem
@@ -389,6 +449,7 @@ h1, h2 { margin: 4px 0 0; font-size: clamp(22px, 2vw, 32px); line-height: 1.05; 
 .chart-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 5px; }
 .chart-title { color: var(--accent-dark); font: 600 10px "IBM Plex Mono", monospace; letter-spacing: .04em; }
 .chart-legend { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font: 11px "IBM Plex Mono", monospace; }
+.chart-legend[hidden] { display: none; }
 .swatch { display: inline-block; width: 14px; height: 3px; border-radius: 2px; }
 .swatch + .swatch { margin-left: 10px; }
 .swatch-avg { background: var(--accent); }
@@ -444,6 +505,7 @@ h1, h2 { margin: 4px 0 0; font-size: clamp(22px, 2vw, 32px); line-height: 1.05; 
      Festgesetzt wäre sie auf so wenig Fläche vor allem verlorene Höhe. */
   .app-header { position: static; height: auto; min-height: 74px; padding: 12px 16px; flex-wrap: wrap; }
   .connection-label { display: none; }
+  .demo-switch { order: 3; width: 100%; margin: 0; justify-content: center; }
   .panel { padding: 30px 18px 48px; }
   /* Die Bühne bleibt randlos. Ohne diese Zeile gäbe ihr die Regel darüber
      einen Rand, den sie auf keiner anderen Breite hat. */
